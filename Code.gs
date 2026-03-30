@@ -4,7 +4,8 @@ const CFG = {
   CLOTHES_SHEET: 'ubrania_robocze',
   SUBMISSIONS_SHEET: 'form_submissions',
   ROOT_FOLDER_NAME: 'Flota_Formularze_Pracownikow',
-  ADMIN_PIN: '1234', // ZMIEŃ
+  ADMIN_LOGIN: 'admin', // ZMIEŃ
+  ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
   MAX_UPLOAD_PDF_MB: 8
 };
@@ -27,10 +28,18 @@ const HEADER_SYNONYMS = {
   workplace: ['workplace','miejscepracy']
 };
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Formulario trabajador')
+function doGet(e) {
+  const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
+  const view = page === 'admin' ? 'Admin' : 'Index';
+
+  return HtmlService.createTemplateFromFile(view)
+    .evaluate()
+    .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /* ======================== INIT ======================== */
@@ -210,10 +219,28 @@ function saveEmployeeForm(payload) {
   return { ok:true, message:'Zapis przebiegł pomyślnie, dziękujemy.' };
 }
 
+
+function adminLogin(login, password) {
+  if (safe_(login) !== CFG.ADMIN_LOGIN || safe_(password) !== CFG.ADMIN_PASSWORD) {
+    throw new Error('Błędny login lub hasło administratora.');
+  }
+
+  const token = Utilities.getUuid();
+  CacheService.getScriptCache().put(`adminsess:${token}`, '1', CFG.SESSION_TTL_SEC);
+  return { ok:true, token };
+}
+
+function assertAdmin_(token) {
+  const t = safe_(token);
+  if (!t) throw new Error('Brak tokenu administratora.');
+  const ok = CacheService.getScriptCache().get(`adminsess:${t}`);
+  if (!ok) throw new Error('Sesja administratora wygasła. Zaloguj się ponownie.');
+}
+
 /* ======================== ADMIN STATS ======================== */
 
-function getAdminStats(pin) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function getAdminStats(adminToken) {
+  assertAdmin_(adminToken);
   const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
   const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
   const ch = headerMap_(cVals[0] || []);
@@ -244,8 +271,8 @@ function getAdminStats(pin) {
 /* ======================== ADMIN IMPORT EXCEL ======================== */
 
 // 1) Konwersja XLSX -> Google Sheet + lista arkuszy
-function adminListExcelSheets(pin, excelFileId) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminListExcelSheets(adminToken, excelFileId) {
+  assertAdmin_(adminToken);
   const convertedSpreadsheetId = convertExcelToGoogleSheet_(excelFileId);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   return {
@@ -255,8 +282,8 @@ function adminListExcelSheets(pin, excelFileId) {
 }
 
 // 2) Podgląd
-function adminPreviewExcel(pin, convertedSpreadsheetId, sheetName, rowSelector, startRow, endRow) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminPreviewExcel(adminToken, convertedSpreadsheetId, sheetName, rowSelector, startRow, endRow) {
+  assertAdmin_(adminToken);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   const sh = ss.getSheetByName(sheetName);
   if (!sh) throw new Error('Brak arkusza.');
@@ -271,8 +298,8 @@ function adminPreviewExcel(pin, convertedSpreadsheetId, sheetName, rowSelector, 
 }
 
 // 3) Import z mapowaniem + wyborem wierszy
-function adminImportWithFieldSelection(pin, params) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminImportWithFieldSelection(adminToken, params) {
+  assertAdmin_(adminToken);
 
   const ss = SpreadsheetApp.openById(params.convertedSpreadsheetId);
   const sh = ss.getSheetByName(params.sheetName);
@@ -340,8 +367,8 @@ function adminImportWithFieldSelection(pin, params) {
 }
 
 // Auto podpowiedź mapowania dla nagłówków
-function adminSuggestMapping(pin, convertedSpreadsheetId, sheetName, targetTable) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminSuggestMapping(adminToken, convertedSpreadsheetId, sheetName, targetTable) {
+  assertAdmin_(adminToken);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   const sh = ss.getSheetByName(sheetName);
   const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(h => String(h).trim());
