@@ -28,9 +28,14 @@ const HEADER_SYNONYMS = {
 };
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  return HtmlService.createTemplateFromFile('Index')
+    .evaluate()
     .setTitle('Formulario trabajador')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /* ======================== INIT ======================== */
