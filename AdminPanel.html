@@ -1,0 +1,35 @@
+<section class="card">
+  <h3 class="section-title">Panel admin – import Excel</h3>
+  <p class="section-sub">Wczytaj plik i wybierz dokładnie kolumny oraz wiersze do importu.</p>
+
+  <div class="grid">
+    <div><label>File ID Excel (Drive)</label><input id="excelFileId"></div>
+    <div><label>Arkusz</label><select id="excelSheetName"></select></div>
+    <div><label>Tabela docelowa</label>
+      <select id="targetTable">
+        <option value="login_seed">login_seed</option>
+        <option value="kontakty">kontakty</option>
+        <option value="ubrania_robocze">ubrania_robocze</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="btn secondary" id="loadSheetsBtn">1) Wczytaj arkusze</button>
+    <button class="btn secondary" id="buildGridBtn">2) Zbuduj widok danych</button>
+    <button class="btn" id="importBtn">3) Importuj zaznaczone</button>
+  </div>
+
+  <div id="importStatus" class="status"></div>
+
+  <div class="divider"></div>
+
+  <div id="previewWrap" class="hidden">
+    <h4 class="section-title">Podgląd danych (wiersze i kolumny wybieralne)</h4>
+    <div style="overflow:auto;max-height:560px;border:1px solid #e2e8f0;border-radius:10px">
+      <table>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
