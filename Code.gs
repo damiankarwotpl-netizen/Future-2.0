@@ -272,12 +272,59 @@ function getAdminStats(adminToken) {
   }));
 }
 
+
+function adminGenerateTestDatabase(adminToken) {
+  assertAdmin_(adminToken);
+
+  const loginSeed = getSheet_(CFG.LOGIN_SEED_SHEET);
+  const contacts = getSheet_(CFG.CONTACTS_SHEET);
+  const clothes = getSheet_(CFG.CLOTHES_SHEET);
+  const submissions = getSheet_(CFG.SUBMISSIONS_SHEET);
+
+  const loginSeedHeader = ['name','surname','pesel','plant'];
+  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'];
+  const clothesHeader = ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
+  const submissionsHeader = ['name','surname','pesel','plant','submittedAt'];
+
+  const employees = [
+    {
+      name:'Jan', surname:'Kowalski', pesel:'90010112345', plant:'Krakow',
+      email:'jan.kowalski@example.com', phone:'+48 600700800', workplace:'Krakow', apartment:'ul. Testowa 1/2',
+      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1',
+      shirt:'L', hoodie:'L', pants:'M', jacket:'L', shoes:'43'
+    },
+    {
+      name:'Anna', surname:'Nowak', pesel:'92020254321', plant:'Warszawa',
+      email:'anna.nowak@example.com', phone:'+48 601602603', workplace:'Warszawa', apartment:'ul. Próbna 5/8',
+      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2',
+      shirt:'M', hoodie:'M', pants:'S', jacket:'M', shoes:'39'
+    },
+    {
+      name:'Carlos', surname:'Gomez', pesel:'85030311111', plant:'Wroclaw',
+      email:'carlos.gomez@example.com', phone:'+57 3201234567', workplace:'Wroclaw', apartment:'Calle 10 #5-20',
+      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3',
+      shirt:'XL', hoodie:'XL', pants:'L', jacket:'XL', shoes:'44'
+    }
+  ];
+
+  writeSheetData_(loginSeed, loginSeedHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant]));
+  writeSheetData_(contacts, contactsHeader, employees.map(e => [
+    e.name, e.surname, e.email, e.pesel, e.phone, e.workplace, e.apartment, e.plant, e.hireDate, e.clothesSize, e.shoesSize, e.notes
+  ]));
+  writeSheetData_(clothes, clothesHeader, employees.map(e => [e.name, e.surname, e.plant, e.shirt, e.hoodie, e.pants, e.jacket, e.shoes]));
+  writeSheetData_(submissions, submissionsHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant, new Date().toISOString()]));
+
+  return { ok:true, generated: employees.length };
+}
+
 /* ======================== ADMIN IMPORT EXCEL ======================== */
 
 // 1) Konwersja XLSX -> Google Sheet + lista arkuszy
-function adminListExcelSheets(adminToken, excelFileId) {
+function adminListExcelSheets(adminToken, filePayload) {
   assertAdmin_(adminToken);
-  const convertedSpreadsheetId = convertExcelToGoogleSheet_(excelFileId);
+  if (!filePayload || !filePayload.fileBase64) throw new Error('Brak pliku Excel do importu.');
+
+  const convertedSpreadsheetId = convertExcelBase64ToGoogleSheet_(filePayload);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   return {
     convertedSpreadsheetId,
@@ -467,11 +514,13 @@ function normalizeKey_(v) {
     .replace(/[^a-z0-9]/g, '');
 }
 
-function convertExcelToGoogleSheet_(excelFileId) {
-  const file = DriveApp.getFileById(excelFileId);
-  const blob = file.getBlob();
+function convertExcelBase64ToGoogleSheet_(filePayload) {
+  const fileName = safe_(filePayload.fileName) || `import_${Date.now()}.xlsx`;
+  const mimeType = safe_(filePayload.mimeType) || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const blob = Utilities.newBlob(Utilities.base64Decode(filePayload.fileBase64), mimeType, fileName);
+
   const created = Drive.Files.create(
-    { name:`IMPORT_${Date.now()}_${file.getName()}`, mimeType: MimeType.GOOGLE_SHEETS },
+    { name:`IMPORT_${Date.now()}_${fileName}`, mimeType: MimeType.GOOGLE_SHEETS },
     blob
   );
   return created.id;
@@ -502,6 +551,13 @@ function upsertTextFile_(folder, fileName, content){
 }
 
 function getOrCreateSheet_(ss, name){ return ss.getSheetByName(name) || ss.insertSheet(name); }
+function writeSheetData_(sheet, header, rows){
+  sheet.clearContents();
+  sheet.getRange(1,1,1,header.length).setValues([header]);
+  if (rows && rows.length) {
+    sheet.getRange(2,1,rows.length,header.length).setValues(rows);
+  }
+}
 function ensureHeader_(sheet, header){
   if (sheet.getLastRow() === 0) { sheet.appendRow(header); return; }
   const cur = sheet.getRange(1,1,1,Math.max(sheet.getLastColumn(), header.length)).getValues()[0];
