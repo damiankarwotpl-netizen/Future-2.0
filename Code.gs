@@ -95,43 +95,37 @@ function syncSeedToCoreTables_() {
 /* ======================== LOGIN + FORM ======================== */
 
 function loginByIdentity(identity) {
-  const name = safe_(identity.name);
-  const surname = safe_(identity.surname);
   const pesel = safe_(identity.pesel);
-  const plant = safe_(identity.plant);
-
-  if (!name || !surname || !plant) throw new Error('Wypełnij: imię, nazwisko, zakład.');
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
   const vals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
   if (vals.length < 2) throw new Error('Brak pracowników.');
 
   const h = headerMap_(vals[0]);
-  let found = null;
+  const matches = [];
 
   for (let i = 1; i < vals.length; i++) {
+    const p = safe_(vals[i][h.pesel]);
+    if (p !== pesel) continue;
+
     const n = safe_(vals[i][h.name]);
     const s = safe_(vals[i][h.surname]);
-    const p = safe_(vals[i][h.pesel]);
     const pl = safe_(vals[i][h.plant] || vals[i][h.workplace]);
 
-    if (n.toLowerCase() === name.toLowerCase() &&
-        s.toLowerCase() === surname.toLowerCase() &&
-        p === pesel &&
-        pl.toLowerCase() === plant.toLowerCase()) {
-      found = {
-        name:n, surname:s, pesel:p, plant:pl,
-        email:safe_(vals[i][h.email]),
-        phone:safe_(vals[i][h.phone]),
-        apartment:safe_(vals[i][h.apartment]),
-        hireDate:safe_(vals[i][h.hireDate]),
-        notes:safe_(vals[i][h.notes])
-      };
-      break;
-    }
+    matches.push({
+      name:n, surname:s, pesel:p, plant:pl,
+      email:safe_(vals[i][h.email]),
+      phone:safe_(vals[i][h.phone]),
+      apartment:safe_(vals[i][h.apartment]),
+      hireDate:safe_(vals[i][h.hireDate]),
+      notes:safe_(vals[i][h.notes])
+    });
   }
 
-  if (!found) throw new Error('Nie znaleziono pracownika.');
+  if (!matches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
+  if (matches.length > 1) throw new Error('Wykryto więcej niż jednego pracownika z tym PESEL. Skontaktuj się z administratorem.');
+
+  const found = matches[0];
 
   const clothes = getClothesData_(found.name, found.surname, found.plant);
   const phone = parsePhone_(found.phone);

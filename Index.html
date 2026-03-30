@@ -55,17 +55,14 @@
 <div class="container">
   <header class="hero">
     <h1>Formularz pracownika</h1>
-    <p>Uzupełnij dane identyfikacyjne, aby rozpocząć formularz.</p>
+    <p>Podaj PESEL, aby rozpocząć formularz.</p>
   </header>
 
   <section class="card">
     <h3 class="section-title">Logowanie pracownika</h3>
     <p class="section-sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
-      <div><label>Imię</label><input id="loginName"></div>
-      <div><label>Nazwisko</label><input id="loginSurname"></div>
-      <div><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
-      <div><label>Zakład</label><input id="loginPlant"></div>
+      <div class="full"><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
     </div>
     <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
@@ -74,7 +71,7 @@
 
   <section class="card hidden" id="employeeFormWrap">
     <h3 class="section-title">Formularz pracownika</h3>
-    <p class="section-sub">Po zalogowaniu możesz uzupełnić i zapisać dane.</p>
+    <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
     <div class="grid">
       <div><label>Email</label><input id="f_email" type="email"></div>
       <div>
@@ -141,10 +138,7 @@
       })
       .withFailureHandler(err=>setStatus('loginStatus','Błąd: '+err.message,'err'))
       .loginByIdentity({
-        name:document.getElementById('loginName').value.trim(),
-        surname:document.getElementById('loginSurname').value.trim(),
-        pesel:document.getElementById('loginPesel').value.trim(),
-        plant:document.getElementById('loginPlant').value.trim()
+        pesel:document.getElementById('loginPesel').value.trim()
       });
   };
 
