@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Panel pracownika i admina</title>
+  <title>Panel pracownika</title>
   <style>
     :root{
       --bg:#f3f6ff;
@@ -17,7 +17,6 @@
       --err:#b91c1c;
       --shadow:0 10px 28px rgba(44,62,120,.08);
     }
-
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -28,88 +27,37 @@
         radial-gradient(circle at top left, #eef2ff 0%, transparent 45%),
         var(--bg);
     }
-
-    .container{max-width:1120px;margin:28px auto;padding:0 14px 28px}
+    .container{max-width:900px;margin:28px auto;padding:0 14px 28px}
     .hero{margin-bottom:16px}
     .hero h1{margin:0 0 6px;font-size:1.5rem}
     .hero p{margin:0;color:var(--muted)}
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
-      box-shadow:var(--shadow);
-      padding:16px;
-      margin-bottom:14px;
-    }
-
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
-
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .full{grid-column:1/-1}
-
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,select,textarea{
-      width:100%;
-      border:1px solid #cbd5e1;
-      border-radius:10px;
-      padding:10px 11px;
-      background:#fff;
-      transition:border-color .15s, box-shadow .15s;
-    }
-    input:focus,select:focus,textarea:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
-    textarea{min-height:90px}
-
+    input{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn{
-      border:none;
-      border-radius:10px;
-      padding:10px 14px;
-      cursor:pointer;
-      font-weight:700;
-      color:#fff;
-      background:linear-gradient(180deg,var(--primary),var(--primary-2));
-      box-shadow:0 6px 16px rgba(79,70,229,.24);
-    }
-    .btn.secondary{background:#eef2ff;color:#3730a3;box-shadow:none}
-
-    .status{
-      margin-top:10px;
-      font-weight:700;
-      padding:8px 10px;
-      border-radius:9px;
-      display:inline-block;
-      min-height:36px;
-      background:#f8fafc;
-      border:1px solid #e2e8f0;
-    }
+    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
+    .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
     .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}
     .err{color:var(--err);background:#fef2f2;border-color:#fecaca}
-
-    .hidden{display:none}
-    table{width:100%;border-collapse:collapse;margin-top:10px;overflow:hidden;border-radius:12px}
-    th,td{border:1px solid #e2e8f0;padding:8px;text-align:left;font-size:.92rem}
-    th{background:#f8fafc}
-
-    .divider{height:1px;background:#e2e8f0;margin:14px 0}
-
-    @media(max-width:900px){
-      .grid{grid-template-columns:1fr}
-      .row .btn{width:100%}
-    }
+    .admin-link{display:inline-block;margin-top:4px;color:#4338ca;text-decoration:none;font-weight:600}
+    .admin-link:hover{text-decoration:underline}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
   </style>
 </head>
 <body>
 <div class="container">
   <header class="hero">
     <h1>Formularz pracownika</h1>
-    <p>Uzupełnij dane pracownika lub przejdź do panelu administracyjnego importu.</p>
+    <p>Uzupełnij dane identyfikacyjne, aby rozpocząć formularz.</p>
   </header>
 
   <section class="card">
     <h3 class="section-title">Logowanie pracownika</h3>
-    <p class="section-sub">Podaj dane identyfikacyjne, aby rozpocząć formularz.</p>
+    <p class="section-sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
       <div><label>Imię</label><input id="loginName"></div>
       <div><label>Nazwisko</label><input id="loginSurname"></div>
@@ -118,125 +66,12 @@
     </div>
     <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
+    <a class="admin-link" href="?page=admin">Przejdź do panelu administratora</a>
   </section>
-
-  <?!= include('AdminPanel'); ?>
 </div>
 
 <script>
-  let convertedSpreadsheetId = null;
-  let currentHeader = [];
-  let allowedFields = [];
-  let mapping = {};
-
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
-
-  document.getElementById('loadSheetsBtn').onclick = () => {
-    google.script.run
-      .withSuccessHandler(res=>{
-        convertedSpreadsheetId = res.convertedSpreadsheetId;
-        const sel = document.getElementById('excelSheetName');
-        sel.innerHTML = '';
-        res.sheetNames.forEach(n => {
-          const o = document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
-        });
-        setStatus('importStatus','Arkusze wczytane.','ok');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd: '+err.message,'err'))
-      .adminListExcelSheets(
-        document.getElementById('adminPin').value.trim(),
-        document.getElementById('excelFileId').value.trim()
-      );
-  };
-
-  document.getElementById('suggestMapBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    google.script.run
-      .withSuccessHandler(res=>{
-        currentHeader = res.header;
-        mapping = res.suggestedMapping;
-        allowedFields = res.allowedFields;
-        renderMappingTable();
-        document.getElementById('mappingWrap').classList.remove('hidden');
-        setStatus('importStatus','Auto-mapowanie gotowe.','ok');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd mapowania: '+err.message,'err'))
-      .adminSuggestMapping(
-        document.getElementById('adminPin').value.trim(),
-        convertedSpreadsheetId,
-        document.getElementById('excelSheetName').value,
-        document.getElementById('targetTable').value
-      );
-  };
-
-  function renderMappingTable(){
-    const body = document.getElementById('mappingBody');
-    body.innerHTML = '';
-    currentHeader.forEach(h=>{
-      const tr = document.createElement('tr');
-      const td1 = document.createElement('td'); td1.textContent = h;
-      const td2 = document.createElement('td');
-      const sel = document.createElement('select');
-      allowedFields.forEach(f=>{
-        const o = document.createElement('option');
-        o.value = f; o.textContent = f;
-        if ((mapping[h] || '__SKIP__') === f) o.selected = true;
-        sel.appendChild(o);
-      });
-      sel.onchange = ()=> mapping[h] = sel.value;
-      td2.appendChild(sel);
-      tr.appendChild(td1); tr.appendChild(td2);
-      body.appendChild(tr);
-    });
-  }
-
-  document.getElementById('previewBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    google.script.run
-      .withSuccessHandler(res=>{
-        const body = document.getElementById('previewBody');
-        body.innerHTML = '';
-        const h = document.createElement('tr');
-        h.innerHTML = `<th colspan="2">Nagłówki: ${res.header.join(' | ')}</th>`;
-        body.appendChild(h);
-        res.rows.forEach(r=>{
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>Wiersz ${r.rowNumber}</td><td>${r.rowValues.join(' | ')}</td>`;
-          body.appendChild(tr);
-        });
-        document.getElementById('previewWrap').classList.remove('hidden');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd podglądu: '+err.message,'err'))
-      .adminPreviewExcel(
-        document.getElementById('adminPin').value.trim(),
-        convertedSpreadsheetId,
-        document.getElementById('excelSheetName').value,
-        document.getElementById('rowSelector').value.trim(),
-        Number(document.getElementById('startRow').value || 2),
-        Number(document.getElementById('endRow').value || 50)
-      );
-  };
-
-  document.getElementById('importBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    if (!currentHeader.length) return setStatus('importStatus','Najpierw auto-mapowanie.','err');
-
-    google.script.run
-      .withSuccessHandler(res=>setStatus('importStatus',`Zaimportowano ${res.imported} wierszy.`, 'ok'))
-      .withFailureHandler(err=>setStatus('importStatus','Błąd importu: '+err.message,'err'))
-      .adminImportWithFieldSelection(
-        document.getElementById('adminPin').value.trim(),
-        {
-          convertedSpreadsheetId,
-          sheetName: document.getElementById('excelSheetName').value,
-          targetTable: document.getElementById('targetTable').value,
-          rowSelector: document.getElementById('rowSelector').value.trim(),
-          startRow: Number(document.getElementById('startRow').value || 2),
-          endRow: Number(document.getElementById('endRow').value || 50),
-          mapping
-        }
-      );
-  };
 
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
