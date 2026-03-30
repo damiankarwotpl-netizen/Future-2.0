@@ -31,9 +31,13 @@ const HEADER_SYNONYMS = {
 function doGet(e) {
   const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
   const view = page === 'admin' ? 'Admin' : 'Index';
+  const baseUrl = ScriptApp.getService().getUrl();
 
-  return HtmlService.createTemplateFromFile(view)
-    .evaluate()
+  const tpl = HtmlService.createTemplateFromFile(view);
+  tpl.homeUrl = baseUrl;
+  tpl.adminUrl = `${baseUrl}?page=admin`;
+
+  return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -282,19 +286,23 @@ function adminListExcelSheets(adminToken, excelFileId) {
 }
 
 // 2) Podgląd
-function adminPreviewExcel(adminToken, convertedSpreadsheetId, sheetName, rowSelector, startRow, endRow) {
+function adminPreviewExcel(adminToken, convertedSpreadsheetId, sheetName) {
   assertAdmin_(adminToken);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   const sh = ss.getSheetByName(sheetName);
   if (!sh) throw new Error('Brak arkusza.');
 
-  const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
-  const rowsWithIndex = loadRowsBySelector_(sh, rowSelector, startRow, endRow);
+  const maxCols = sh.getLastColumn();
+  const lastRow = sh.getLastRow();
+  if (maxCols < 1 || lastRow < 1) return { header: [], rows: [] };
 
-  return {
-    header,
-    rows: rowsWithIndex.slice(0, 10) // max 10 w podglądzie
-  };
+  const header = sh.getRange(1,1,1,maxCols).getValues()[0].map(v => safe_(v));
+  if (lastRow < 2) return { header, rows: [] };
+
+  const values = sh.getRange(2,1,lastRow - 1,maxCols).getValues();
+  const rows = values.map((row, idx) => ({ rowNumber: idx + 2, rowValues: row }));
+
+  return { header, rows };
 }
 
 // 3) Import z mapowaniem + wyborem wierszy
@@ -309,7 +317,12 @@ function adminImportWithFieldSelection(adminToken, params) {
   const mapping = params.mapping || {}; // { "NaglowekExcel": "name" lub "__SKIP__" }
   const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(h => String(h).trim());
 
-  const rowsWithIndex = loadRowsBySelector_(sh, params.rowSelector, params.startRow, params.endRow);
+  const selectedRowsSet = new Set((params.selectedRows || []).map(n => Number(n)).filter(n => Number.isFinite(n) && n >= 2));
+  const selectedColsSet = new Set((params.selectedColumns || []).map(safe_).filter(Boolean));
+
+  const rowsWithIndex = selectedRowsSet.size
+    ? [...selectedRowsSet].sort((a,b)=>a-b).map(r => ({ rowNumber:r, rowValues: sh.getRange(r,1,1,sh.getLastColumn()).getValues()[0] }))
+    : loadRowsBySelector_(sh, params.rowSelector, params.startRow, params.endRow);
 
   let imported = 0;
   const target = getSheet_(targetTable);
@@ -317,6 +330,7 @@ function adminImportWithFieldSelection(adminToken, params) {
   rowsWithIndex.forEach(({rowValues}) => {
     const rec = {};
     header.forEach((sourceHeader, i) => {
+      if (selectedColsSet.size && !selectedColsSet.has(sourceHeader)) return;
       const targetField = mapping[sourceHeader];
       if (!targetField || targetField === '__SKIP__') return;
       rec[targetField] = safe_(rowValues[i]);

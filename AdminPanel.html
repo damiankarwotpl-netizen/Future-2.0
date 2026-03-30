@@ -1,6 +1,6 @@
 <section class="card">
   <h3 class="section-title">Panel admin – import Excel</h3>
-  <p class="section-sub">Załaduj plik, sprawdź mapowanie kolumn i importuj wybrane wiersze.</p>
+  <p class="section-sub">Wczytaj plik i wybierz dokładnie kolumny oraz wiersze do importu.</p>
 
   <div class="grid">
     <div><label>File ID Excel (Drive)</label><input id="excelFileId"></div>
@@ -12,36 +12,24 @@
         <option value="ubrania_robocze">ubrania_robocze</option>
       </select>
     </div>
-    <div><label>Row selector (np. 2,5,7-10)</label><input id="rowSelector" placeholder="opcjonalnie"></div>
-    <div><label>Zakres start/end (gdy brak row selector)</label>
-      <div class="grid">
-        <input id="startRow" type="number" value="2">
-        <input id="endRow" type="number" value="50">
-      </div>
-    </div>
   </div>
 
   <div class="row">
     <button class="btn secondary" id="loadSheetsBtn">1) Wczytaj arkusze</button>
-    <button class="btn secondary" id="suggestMapBtn">2) Auto-mapowanie</button>
-    <button class="btn secondary" id="previewBtn">3) Podgląd wierszy</button>
-    <button class="btn" id="importBtn">4) Importuj</button>
+    <button class="btn secondary" id="buildGridBtn">2) Zbuduj widok danych</button>
+    <button class="btn" id="importBtn">3) Importuj zaznaczone</button>
   </div>
 
   <div id="importStatus" class="status"></div>
 
   <div class="divider"></div>
 
-  <div id="mappingWrap" class="hidden">
-    <h4 class="section-title">Mapowanie kolumn</h4>
-    <table>
-      <thead><tr><th>Kolumna w Excel</th><th>Mapuj do</th></tr></thead>
-      <tbody id="mappingBody"></tbody>
-    </table>
-  </div>
-
   <div id="previewWrap" class="hidden">
-    <h4 class="section-title">Podgląd importu</h4>
-    <table><tbody id="previewBody"></tbody></table>
+    <h4 class="section-title">Podgląd danych (wiersze i kolumny wybieralne)</h4>
+    <div style="overflow:auto;max-height:560px;border:1px solid #e2e8f0;border-radius:10px">
+      <table>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
   </div>
 </section>
