@@ -27,7 +27,7 @@
         radial-gradient(circle at top left, #eef2ff 0%, transparent 45%),
         var(--bg);
     }
-    .container{max-width:900px;margin:28px auto;padding:0 14px 28px}
+    .container{max-width:1100px;margin:28px auto;padding:0 14px 28px}
     .hero{margin-bottom:16px}
     .hero h1{margin:0 0 6px;font-size:1.5rem}
     .hero p{margin:0;color:var(--muted)}
@@ -35,9 +35,11 @@
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
-    input:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
+    textarea{min-height:90px}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
     .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
     .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
@@ -45,6 +47,7 @@
     .err{color:var(--err);background:#fef2f2;border-color:#fecaca}
     .admin-link{display:inline-block;margin-top:4px;color:#4338ca;text-decoration:none;font-weight:600}
     .admin-link:hover{text-decoration:underline}
+    .hidden{display:none}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
   </style>
 </head>
@@ -52,37 +55,125 @@
 <div class="container">
   <header class="hero">
     <h1>Formularz pracownika</h1>
-    <p>Uzupełnij dane identyfikacyjne, aby rozpocząć formularz.</p>
+    <p>Podaj PESEL, aby rozpocząć formularz.</p>
   </header>
 
   <section class="card">
     <h3 class="section-title">Logowanie pracownika</h3>
     <p class="section-sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
-      <div><label>Imię</label><input id="loginName"></div>
-      <div><label>Nazwisko</label><input id="loginSurname"></div>
-      <div><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
-      <div><label>Zakład</label><input id="loginPlant"></div>
+      <div class="full"><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
     </div>
     <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
     <a class="admin-link" href="<?= adminUrl ?>">Przejdź do panelu administratora</a>
   </section>
+
+  <section class="card hidden" id="employeeFormWrap">
+    <h3 class="section-title">Formularz pracownika</h3>
+    <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
+    <div class="grid">
+      <div><label>Email</label><input id="f_email" type="email"></div>
+      <div>
+        <label>Telefon</label>
+        <div class="grid" style="grid-template-columns:130px 1fr;gap:8px">
+          <select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select>
+          <input id="f_phoneNumber" placeholder="np. 600700800">
+        </div>
+      </div>
+      <div><label>Mieszkanie</label><input id="f_apartment"></div>
+      <div><label>Data zatrudnienia</label><input id="f_hireDate" placeholder="YYYY-MM-DD"></div>
+      <div><label>Koszulka</label><input id="f_shirt"></div>
+      <div><label>Bluza</label><input id="f_hoodie"></div>
+      <div><label>Spodnie</label><input id="f_pants"></div>
+      <div><label>Kurtka</label><input id="f_jacket"></div>
+      <div><label>Buty</label><input id="f_shoes"></div>
+      <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
+      <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
+    </div>
+    <div class="row"><button class="btn" id="saveFormBtn">Zapisz formularz</button></div>
+    <div id="formStatus" class="status"></div>
+  </section>
 </div>
 
 <script>
+  let sessionToken = null;
+
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
+
+  function fillEmployeeForm(employee){
+    document.getElementById('f_email').value = employee.email || '';
+    document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
+    document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
+    document.getElementById('f_apartment').value = employee.apartment || '';
+    document.getElementById('f_hireDate').value = employee.hireDate || '';
+    document.getElementById('f_shirt').value = employee.shirt || '';
+    document.getElementById('f_hoodie').value = employee.hoodie || '';
+    document.getElementById('f_pants').value = employee.pants || '';
+    document.getElementById('f_jacket').value = employee.jacket || '';
+    document.getElementById('f_shoes').value = employee.shoes || '';
+    document.getElementById('f_notes').value = employee.notes || '';
+  }
+
+  function readFileAsBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const out = String(reader.result || '');
+        resolve(out.includes(',') ? out.split(',')[1] : out);
+      };
+      reader.onerror = () => reject(new Error('Nie udało się odczytać pliku.'));
+      reader.readAsDataURL(file);
+    });
+  }
 
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
-      .withSuccessHandler(()=>setStatus('loginStatus','OK','ok'))
+      .withSuccessHandler((res)=>{
+        sessionToken = res.token;
+        fillEmployeeForm(res.employee || {});
+        document.getElementById('employeeFormWrap').classList.remove('hidden');
+        setStatus('loginStatus','OK - formularz gotowy do edycji.','ok');
+        setStatus('formStatus','', '');
+      })
       .withFailureHandler(err=>setStatus('loginStatus','Błąd: '+err.message,'err'))
       .loginByIdentity({
-        name:document.getElementById('loginName').value.trim(),
-        surname:document.getElementById('loginSurname').value.trim(),
-        pesel:document.getElementById('loginPesel').value.trim(),
-        plant:document.getElementById('loginPlant').value.trim()
+        pesel:document.getElementById('loginPesel').value.trim()
       });
+  };
+
+  document.getElementById('saveFormBtn').onclick = async () => {
+    if (!sessionToken) return setStatus('formStatus','Najpierw zaloguj się.','err');
+
+    const payload = {
+      token: sessionToken,
+      email: document.getElementById('f_email').value.trim(),
+      phonePrefix: document.getElementById('f_phonePrefix').value,
+      phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
+      apartment: document.getElementById('f_apartment').value.trim(),
+      hireDate: document.getElementById('f_hireDate').value.trim(),
+      shirt: document.getElementById('f_shirt').value.trim(),
+      hoodie: document.getElementById('f_hoodie').value.trim(),
+      pants: document.getElementById('f_pants').value.trim(),
+      jacket: document.getElementById('f_jacket').value.trim(),
+      shoes: document.getElementById('f_shoes').value.trim(),
+      notes: document.getElementById('f_notes').value.trim()
+    };
+
+    const attachment = document.getElementById('f_attachment').files[0];
+    if (attachment) {
+      try {
+        payload.attachmentBase64 = await readFileAsBase64(attachment);
+        payload.attachmentName = attachment.name;
+      } catch (err) {
+        return setStatus('formStatus','Błąd odczytu PDF: '+err.message,'err');
+      }
+    }
+
+    google.script.run
+      .withSuccessHandler(res=>setStatus('formStatus',res.message || 'Zapisano.','ok'))
+      .withFailureHandler(err=>setStatus('formStatus','Błąd zapisu: '+err.message,'err'))
+      .saveEmployeeForm(payload);
   };
 </script>
 </body>
