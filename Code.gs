@@ -41,6 +41,7 @@ function doGet(e) {
   const tpl = HtmlService.createTemplateFromFile(view);
   tpl.homeUrl = baseUrl;
   tpl.adminUrl = `${baseUrl}?page=admin`;
+  tpl.canonicalUrl = page === 'admin' ? `${baseUrl}?page=admin` : baseUrl;
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
