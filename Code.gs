@@ -4,7 +4,8 @@ const CFG = {
   CLOTHES_SHEET: 'ubrania_robocze',
   SUBMISSIONS_SHEET: 'form_submissions',
   ROOT_FOLDER_NAME: 'Flota_Formularze_Pracownikow',
-  ADMIN_PIN: '1234', // ZMIEŃ
+  ADMIN_LOGIN: 'admin', // ZMIEŃ
+  ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
   MAX_UPLOAD_PDF_MB: 8
 };
@@ -27,10 +28,22 @@ const HEADER_SYNONYMS = {
   workplace: ['workplace','miejscepracy']
 };
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Formulario trabajador')
+function doGet(e) {
+  const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
+  const view = page === 'admin' ? 'Admin' : 'Index';
+  const baseUrl = ScriptApp.getService().getUrl();
+
+  const tpl = HtmlService.createTemplateFromFile(view);
+  tpl.homeUrl = baseUrl;
+  tpl.adminUrl = `${baseUrl}?page=admin`;
+
+  return tpl.evaluate()
+    .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /* ======================== INIT ======================== */
@@ -43,7 +56,7 @@ function initAll() {
   const submissions = getOrCreateSheet_(ss, CFG.SUBMISSIONS_SHEET);
 
   ensureHeader_(loginSeed, ['name','surname','pesel','plant']);
-  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes']);
+  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry']);
   ensureHeader_(clothes, ['name','surname','plant','shirt','hoodie','pants','jacket','shoes']);
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
 
@@ -66,7 +79,7 @@ function syncSeedToCoreTables_() {
     if (!name || !surname || !pesel || !plant) continue;
 
     upsertByKey_(contacts,
-      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
       ['name','surname','pesel','plant'],
       { name, surname, pesel, plant, email:'', phone:'', workplace:plant, apartment:'', hireDate:'', clothesSize:'', shoesSize:'', notes:'' }
     );
@@ -82,43 +95,45 @@ function syncSeedToCoreTables_() {
 /* ======================== LOGIN + FORM ======================== */
 
 function loginByIdentity(identity) {
-  const name = safe_(identity.name);
-  const surname = safe_(identity.surname);
   const pesel = safe_(identity.pesel);
-  const plant = safe_(identity.plant);
-
-  if (!name || !surname || !plant) throw new Error('Wypełnij: imię, nazwisko, zakład.');
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
   const vals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
   if (vals.length < 2) throw new Error('Brak pracowników.');
 
   const h = headerMap_(vals[0]);
-  let found = null;
+  const matches = [];
 
   for (let i = 1; i < vals.length; i++) {
+    const p = safe_(vals[i][h.pesel]);
+    if (p !== pesel) continue;
+
     const n = safe_(vals[i][h.name]);
     const s = safe_(vals[i][h.surname]);
-    const p = safe_(vals[i][h.pesel]);
     const pl = safe_(vals[i][h.plant] || vals[i][h.workplace]);
 
-    if (n.toLowerCase() === name.toLowerCase() &&
-        s.toLowerCase() === surname.toLowerCase() &&
-        p === pesel &&
-        pl.toLowerCase() === plant.toLowerCase()) {
-      found = {
-        name:n, surname:s, pesel:p, plant:pl,
-        email:safe_(vals[i][h.email]),
-        phone:safe_(vals[i][h.phone]),
-        apartment:safe_(vals[i][h.apartment]),
-        hireDate:safe_(vals[i][h.hireDate]),
-        notes:safe_(vals[i][h.notes])
-      };
-      break;
-    }
+    matches.push({
+      name:n, surname:s, pesel:p, plant:pl,
+      email:safe_(vals[i][h.email]),
+      phone:safe_(vals[i][h.phone]),
+      apartment:safe_(vals[i][h.apartment]),
+      hireDate:safe_(vals[i][h.hireDate]),
+      notes:safe_(vals[i][h.notes]),
+      bankAccount:safe_(vals[i][h.bankAccount]),
+      birthDate:safe_(vals[i][h.birthDate]),
+      passportNumber:safe_(vals[i][h.passportNumber]),
+      passportExpiry:safe_(vals[i][h.passportExpiry]),
+      arrivalDate:safe_(vals[i][h.arrivalDate]),
+      firstWorkDate:safe_(vals[i][h.firstWorkDate]),
+      intlDrivingLicense:safe_(vals[i][h.intlDrivingLicense]),
+      intlDrivingLicenseExpiry:safe_(vals[i][h.intlDrivingLicenseExpiry])
+    });
   }
 
-  if (!found) throw new Error('Nie znaleziono pracownika.');
+  if (!matches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
+  if (matches.length > 1) throw new Error('Wykryto więcej niż jednego pracownika z tym PESEL. Skontaktuj się z administratorem.');
+
+  const found = matches[0];
 
   const clothes = getClothesData_(found.name, found.surname, found.plant);
   const phone = parsePhone_(found.phone);
@@ -148,7 +163,7 @@ function saveEmployeeForm(payload) {
   if (!['+48', '+57'].includes(phonePrefix)) throw new Error('Kierunkowy: +48 albo +57');
 
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
-    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
     ['name','surname','pesel','plant'],
     {
       name, surname, pesel, plant,
@@ -159,7 +174,15 @@ function saveEmployeeForm(payload) {
       hireDate: safe_(payload.hireDate),
       clothesSize: '',
       shoesSize: safe_(payload.shoes),
-      notes: safe_(payload.notes)
+      notes: safe_(payload.notes),
+      bankAccount: safe_(payload.bankAccount),
+      birthDate: safe_(payload.birthDate),
+      passportNumber: safe_(payload.passportNumber),
+      passportExpiry: safe_(payload.passportExpiry),
+      arrivalDate: safe_(payload.arrivalDate),
+      firstWorkDate: safe_(payload.firstWorkDate),
+      intlDrivingLicense: safe_(payload.intlDrivingLicense),
+      intlDrivingLicenseExpiry: safe_(payload.intlDrivingLicenseExpiry)
     }
   );
 
@@ -189,6 +212,14 @@ function saveEmployeeForm(payload) {
       phone:`${phonePrefix} ${safe_(payload.phoneNumber)}`.trim(),
       apartment:safe_(payload.apartment),
       hireDate:safe_(payload.hireDate),
+      bankAccount:safe_(payload.bankAccount),
+      birthDate:safe_(payload.birthDate),
+      passportNumber:safe_(payload.passportNumber),
+      passportExpiry:safe_(payload.passportExpiry),
+      arrivalDate:safe_(payload.arrivalDate),
+      firstWorkDate:safe_(payload.firstWorkDate),
+      intlDrivingLicense:safe_(payload.intlDrivingLicense),
+      intlDrivingLicenseExpiry:safe_(payload.intlDrivingLicenseExpiry),
       shirt:safe_(payload.shirt), hoodie:safe_(payload.hoodie), pants:safe_(payload.pants), jacket:safe_(payload.jacket), shoes:safe_(payload.shoes),
       notes:safe_(payload.notes),
       updatedAt:new Date().toISOString()
@@ -207,13 +238,41 @@ function saveEmployeeForm(payload) {
     folder.createFile(blob);
   }
 
+  if (payload.drivingLicensePhotoBase64 && payload.drivingLicensePhotoName) {
+    const imgMime = safe_(payload.drivingLicensePhotoMimeType) || 'image/jpeg';
+    const imgBlob = Utilities.newBlob(
+      Utilities.base64Decode(payload.drivingLicensePhotoBase64),
+      imgMime,
+      safe_(payload.drivingLicensePhotoName) || 'prawo_jazdy.jpg'
+    );
+    folder.createFile(imgBlob);
+  }
+
   return { ok:true, message:'Zapis przebiegł pomyślnie, dziękujemy.' };
+}
+
+
+function adminLogin(login, password) {
+  if (safe_(login) !== CFG.ADMIN_LOGIN || safe_(password) !== CFG.ADMIN_PASSWORD) {
+    throw new Error('Błędny login lub hasło administratora.');
+  }
+
+  const token = Utilities.getUuid();
+  CacheService.getScriptCache().put(`adminsess:${token}`, '1', CFG.SESSION_TTL_SEC);
+  return { ok:true, token };
+}
+
+function assertAdmin_(token) {
+  const t = safe_(token);
+  if (!t) throw new Error('Brak tokenu administratora.');
+  const ok = CacheService.getScriptCache().get(`adminsess:${t}`);
+  if (!ok) throw new Error('Sesja administratora wygasła. Zaloguj się ponownie.');
 }
 
 /* ======================== ADMIN STATS ======================== */
 
-function getAdminStats(pin) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function getAdminStats(adminToken) {
+  assertAdmin_(adminToken);
   const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
   const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
   const ch = headerMap_(cVals[0] || []);
@@ -241,12 +300,60 @@ function getAdminStats(pin) {
   }));
 }
 
+
+function adminGenerateTestDatabase(adminToken) {
+  assertAdmin_(adminToken);
+
+  const loginSeed = getSheet_(CFG.LOGIN_SEED_SHEET);
+  const contacts = getSheet_(CFG.CONTACTS_SHEET);
+  const clothes = getSheet_(CFG.CLOTHES_SHEET);
+  const submissions = getSheet_(CFG.SUBMISSIONS_SHEET);
+
+  const loginSeedHeader = ['name','surname','pesel','plant'];
+  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
+  const clothesHeader = ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
+  const submissionsHeader = ['name','surname','pesel','plant','submittedAt'];
+
+  const employees = [
+    {
+      name:'Jan', surname:'Kowalski', pesel:'90010112345', plant:'Krakow',
+      email:'jan.kowalski@example.com', phone:'+48 600700800', workplace:'Krakow', apartment:'ul. Testowa 1/2',
+      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1', bankAccount:'11 2222 3333 4444 5555 6666 7777', birthDate:'1990-01-01', passportNumber:'PA1234567', passportExpiry:'2030-12-31', arrivalDate:'2021-04-10', firstWorkDate:'2021-04-20', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2028-05-30',
+      shirt:'L', hoodie:'L', pants:'M', jacket:'L', shoes:'43'
+    },
+    {
+      name:'Anna', surname:'Nowak', pesel:'92020254321', plant:'Warszawa',
+      email:'anna.nowak@example.com', phone:'+48 601602603', workplace:'Warszawa', apartment:'ul. Próbna 5/8',
+      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2', bankAccount:'22 3333 4444 5555 6666 7777 8888', birthDate:'1992-02-02', passportNumber:'PB7654321', passportExpiry:'2029-09-15', arrivalDate:'2022-06-01', firstWorkDate:'2022-06-15', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:'',
+      shirt:'M', hoodie:'M', pants:'S', jacket:'M', shoes:'39'
+    },
+    {
+      name:'Carlos', surname:'Gomez', pesel:'85030311111', plant:'Wroclaw',
+      email:'carlos.gomez@example.com', phone:'+57 3201234567', workplace:'Wroclaw', apartment:'Calle 10 #5-20',
+      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3', bankAccount:'33 4444 5555 6666 7777 8888 9999', birthDate:'1985-03-03', passportNumber:'PC1112223', passportExpiry:'2028-08-08', arrivalDate:'2020-01-12', firstWorkDate:'2020-02-01', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2027-01-10',
+      shirt:'XL', hoodie:'XL', pants:'L', jacket:'XL', shoes:'44'
+    }
+  ];
+
+  writeSheetData_(loginSeed, loginSeedHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant]));
+  writeSheetData_(contacts, contactsHeader, employees.map(e => [
+    e.name, e.surname, e.email, e.pesel, e.phone, e.workplace, e.apartment, e.plant, e.hireDate, e.clothesSize, e.shoesSize, e.notes,
+    e.bankAccount, e.birthDate, e.passportNumber, e.passportExpiry, e.arrivalDate, e.firstWorkDate, e.intlDrivingLicense, e.intlDrivingLicenseExpiry
+  ]));
+  writeSheetData_(clothes, clothesHeader, employees.map(e => [e.name, e.surname, e.plant, e.shirt, e.hoodie, e.pants, e.jacket, e.shoes]));
+  writeSheetData_(submissions, submissionsHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant, new Date().toISOString()]));
+
+  return { ok:true, generated: employees.length };
+}
+
 /* ======================== ADMIN IMPORT EXCEL ======================== */
 
 // 1) Konwersja XLSX -> Google Sheet + lista arkuszy
-function adminListExcelSheets(pin, excelFileId) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
-  const convertedSpreadsheetId = convertExcelToGoogleSheet_(excelFileId);
+function adminListExcelSheets(adminToken, filePayload) {
+  assertAdmin_(adminToken);
+  if (!filePayload || !filePayload.fileBase64) throw new Error('Brak pliku Excel do importu.');
+
+  const convertedSpreadsheetId = convertExcelBase64ToGoogleSheet_(filePayload);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   return {
     convertedSpreadsheetId,
@@ -255,24 +362,28 @@ function adminListExcelSheets(pin, excelFileId) {
 }
 
 // 2) Podgląd
-function adminPreviewExcel(pin, convertedSpreadsheetId, sheetName, rowSelector, startRow, endRow) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminPreviewExcel(adminToken, convertedSpreadsheetId, sheetName) {
+  assertAdmin_(adminToken);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   const sh = ss.getSheetByName(sheetName);
   if (!sh) throw new Error('Brak arkusza.');
 
-  const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
-  const rowsWithIndex = loadRowsBySelector_(sh, rowSelector, startRow, endRow);
+  const maxCols = sh.getLastColumn();
+  const lastRow = sh.getLastRow();
+  if (maxCols < 1 || lastRow < 1) return { header: [], rows: [] };
 
-  return {
-    header,
-    rows: rowsWithIndex.slice(0, 10) // max 10 w podglądzie
-  };
+  const header = sh.getRange(1,1,1,maxCols).getValues()[0].map(v => safe_(v));
+  if (lastRow < 2) return { header, rows: [] };
+
+  const values = sh.getRange(2,1,lastRow - 1,maxCols).getValues();
+  const rows = values.map((row, idx) => ({ rowNumber: idx + 2, rowValues: row }));
+
+  return { header, rows };
 }
 
 // 3) Import z mapowaniem + wyborem wierszy
-function adminImportWithFieldSelection(pin, params) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminImportWithFieldSelection(adminToken, params) {
+  assertAdmin_(adminToken);
 
   const ss = SpreadsheetApp.openById(params.convertedSpreadsheetId);
   const sh = ss.getSheetByName(params.sheetName);
@@ -282,7 +393,12 @@ function adminImportWithFieldSelection(pin, params) {
   const mapping = params.mapping || {}; // { "NaglowekExcel": "name" lub "__SKIP__" }
   const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(h => String(h).trim());
 
-  const rowsWithIndex = loadRowsBySelector_(sh, params.rowSelector, params.startRow, params.endRow);
+  const selectedRowsSet = new Set((params.selectedRows || []).map(n => Number(n)).filter(n => Number.isFinite(n) && n >= 2));
+  const selectedColsSet = new Set((params.selectedColumns || []).map(safe_).filter(Boolean));
+
+  const rowsWithIndex = selectedRowsSet.size
+    ? [...selectedRowsSet].sort((a,b)=>a-b).map(r => ({ rowNumber:r, rowValues: sh.getRange(r,1,1,sh.getLastColumn()).getValues()[0] }))
+    : loadRowsBySelector_(sh, params.rowSelector, params.startRow, params.endRow);
 
   let imported = 0;
   const target = getSheet_(targetTable);
@@ -290,6 +406,7 @@ function adminImportWithFieldSelection(pin, params) {
   rowsWithIndex.forEach(({rowValues}) => {
     const rec = {};
     header.forEach((sourceHeader, i) => {
+      if (selectedColsSet.size && !selectedColsSet.has(sourceHeader)) return;
       const targetField = mapping[sourceHeader];
       if (!targetField || targetField === '__SKIP__') return;
       rec[targetField] = safe_(rowValues[i]);
@@ -305,12 +422,15 @@ function adminImportWithFieldSelection(pin, params) {
     if (targetTable === CFG.CONTACTS_SHEET) {
       if (!rec.name || !rec.surname || !rec.pesel || !rec.plant) return;
       upsertByKey_(target,
-        ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+        ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
         ['name','surname','pesel','plant'],
         {
           name:rec.name || '', surname:rec.surname || '', pesel:rec.pesel || '', plant:rec.plant || '',
           email:rec.email || '', phone:rec.phone || '', workplace:rec.workplace || rec.plant || '',
-          apartment:rec.apartment || '', hireDate:rec.hireDate || '', clothesSize:'', shoesSize:rec.shoes || '', notes:rec.notes || ''
+          apartment:rec.apartment || '', hireDate:rec.hireDate || '', clothesSize:'', shoesSize:rec.shoes || '', notes:rec.notes || '',
+          bankAccount:rec.bankAccount || '', birthDate:rec.birthDate || '', passportNumber:rec.passportNumber || '',
+          passportExpiry:rec.passportExpiry || '', arrivalDate:rec.arrivalDate || '', firstWorkDate:rec.firstWorkDate || '',
+          intlDrivingLicense:rec.intlDrivingLicense || '', intlDrivingLicenseExpiry:rec.intlDrivingLicenseExpiry || ''
         }
       );
       imported++;
@@ -340,8 +460,8 @@ function adminImportWithFieldSelection(pin, params) {
 }
 
 // Auto podpowiedź mapowania dla nagłówków
-function adminSuggestMapping(pin, convertedSpreadsheetId, sheetName, targetTable) {
-  if (safe_(pin) !== CFG.ADMIN_PIN) throw new Error('Błędny PIN admin.');
+function adminSuggestMapping(adminToken, convertedSpreadsheetId, sheetName, targetTable) {
+  assertAdmin_(adminToken);
   const ss = SpreadsheetApp.openById(convertedSpreadsheetId);
   const sh = ss.getSheetByName(sheetName);
   const header = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(h => String(h).trim());
@@ -415,7 +535,7 @@ function buildAutoMapping_(headerRow) {
 
 function getAllowedFieldsForTarget_(targetTable) {
   if (targetTable === CFG.LOGIN_SEED_SHEET) return ['name','surname','pesel','plant'];
-  if (targetTable === CFG.CONTACTS_SHEET) return ['name','surname','pesel','plant','email','phone','workplace','apartment','hireDate','notes','shoes'];
+  if (targetTable === CFG.CONTACTS_SHEET) return ['name','surname','pesel','plant','email','phone','workplace','apartment','hireDate','notes','shoes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
   if (targetTable === CFG.CLOTHES_SHEET) return ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
   return [];
 }
@@ -426,11 +546,13 @@ function normalizeKey_(v) {
     .replace(/[^a-z0-9]/g, '');
 }
 
-function convertExcelToGoogleSheet_(excelFileId) {
-  const file = DriveApp.getFileById(excelFileId);
-  const blob = file.getBlob();
+function convertExcelBase64ToGoogleSheet_(filePayload) {
+  const fileName = safe_(filePayload.fileName) || `import_${Date.now()}.xlsx`;
+  const mimeType = safe_(filePayload.mimeType) || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const blob = Utilities.newBlob(Utilities.base64Decode(filePayload.fileBase64), mimeType, fileName);
+
   const created = Drive.Files.create(
-    { name:`IMPORT_${Date.now()}_${file.getName()}`, mimeType: MimeType.GOOGLE_SHEETS },
+    { name:`IMPORT_${Date.now()}_${fileName}`, mimeType: MimeType.GOOGLE_SHEETS },
     blob
   );
   return created.id;
@@ -461,6 +583,13 @@ function upsertTextFile_(folder, fileName, content){
 }
 
 function getOrCreateSheet_(ss, name){ return ss.getSheetByName(name) || ss.insertSheet(name); }
+function writeSheetData_(sheet, header, rows){
+  sheet.clearContents();
+  sheet.getRange(1,1,1,header.length).setValues([header]);
+  if (rows && rows.length) {
+    sheet.getRange(2,1,rows.length,header.length).setValues(rows);
+  }
+}
 function ensureHeader_(sheet, header){
   if (sheet.getLastRow() === 0) { sheet.appendRow(header); return; }
   const cur = sheet.getRange(1,1,1,Math.max(sheet.getLastColumn(), header.length)).getValues()[0];
