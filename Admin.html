@@ -16,14 +16,21 @@
     (function normalizeWebAppUrl() {
       try {
         const current = new URL(window.location.href);
+        const isAppsScriptContentHost = /(^|\.)googleusercontent\.com$/i.test(current.hostname);
+        const hasRequiredAppsScriptParams =
+          current.searchParams.has('user_content_key') || current.searchParams.has('lib');
+        if (isAppsScriptContentHost || hasRequiredAppsScriptParams) return;
+
         const normalized = new URL(window.location.href);
-        normalized.search = '';
+        const removableParams = ['usp', 'resourcekey', 'id', 'euid', 'pli', 'authuser'];
+        removableParams.forEach(p => normalized.searchParams.delete(p));
         const expectedPage = '<?= pageName ?>';
         if (expectedPage === 'admin') normalized.searchParams.set('page', 'admin');
+        else normalized.searchParams.delete('page');
 
         const samePath = current.origin === normalized.origin && current.pathname === normalized.pathname;
         const sameQuery = current.search === normalized.search;
-        const hasWrapperParams = ['usp', 'resourcekey', 'id', 'euid', 'pli', 'authuser'].some(p => current.searchParams.has(p));
+        const hasWrapperParams = removableParams.some(p => current.searchParams.has(p));
 
         if (samePath && (!sameQuery || hasWrapperParams)) {
           window.location.replace(normalized.toString());
