@@ -47,29 +47,36 @@
     .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
     .plant-link:hover{text-decoration:underline}
     .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
+    .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999}
+    .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
+    .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
     @media(max-width:900px){.stats-layout{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
+<div class="lang-switch">
+  <button class="flag-btn" id="langPL" title="Polski">🇵🇱</button>
+  <button class="flag-btn" id="langES" title="Español">🇪🇸</button>
+</div>
 <div class="container">
   <header class="hero">
     <div>
-      <h1>Panel administratora</h1>
-      <p>Zarządzaj listami, pracownikami i statystykami w jednym miejscu.</p>
+      <h1 data-i18n="admin_title">Panel administratora</h1>
+      <p data-i18n="admin_sub">Zarządzaj listami, pracownikami i statystykami w jednym miejscu.</p>
     </div>
-    <div class="hero-badge">Tryb administracyjny • LIVE</div>
+    <div class="hero-badge" data-i18n="admin_mode">Tryb administracyjny • LIVE</div>
   </header>
   <section class="card">
-    <h3 class="section-title">Logowanie administratora</h3>
-    <p class="section-sub">Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.</p>
+    <h3 class="section-title" data-i18n="admin_login_title">Logowanie administratora</h3>
+    <p class="section-sub" data-i18n="admin_login_sub">Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.</p>
     <div class="grid">
-      <div><label>Login</label><input id="adminLogin"></div>
-      <div><label>Hasło</label><input id="adminPassword" type="password"></div>
+      <div><label data-i18n="login">Login</label><input id="adminLogin"></div>
+      <div><label data-i18n="password">Hasło</label><input id="adminPassword" type="password"></div>
     </div>
-    <div class="row"><button class="btn" id="adminAuthBtn">Zaloguj do panelu admin</button></div>
+    <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
@@ -81,8 +88,67 @@
   let adminToken = null;
   let currentEmployeeKey = null;
   let statsPollHandle = null;
+  const I18N = {
+    pl: {
+      admin_title:'Panel administratora', admin_sub:'Zarządzaj listami, pracownikami i statystykami w jednym miejscu.', admin_mode:'Tryb administracyjny • LIVE',
+      admin_login_title:'Logowanie administratora', admin_login_sub:'Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.',
+      login:'Login', password:'Hasło', admin_login_btn:'Zaloguj do panelu admin', back_emp:'← Wróć do panelu pracownika',
+      admin_auth_ok:'Autoryzacja poprawna.', auth_first:'Najpierw zaloguj się jako administrator.', login_err:'Błąd logowania: ',
+      list_refresh_err:'Błąd odświeżania list: ', stats_err:'Błąd statystyk: ', missing_err:'Błąd pobierania brakujących PESEL: ',
+      save_ok:'Zapisano zmiany pracownika.', save_err:'Błąd zapisu pracownika: ',
+      panel_lists_title:'Panel admin – listy do formularza', panel_lists_sub:'Dodawaj/usuwaj listy PESEL, zakładów i mieszkań oraz edytuj zapisanych pracowników.',
+      plant_for_pesel:'Zakład dla listy PESEL (najpierw wybierz)', add_pesel:'Dodaj PESEL (1 linia = 1 PESEL)', add_plant:'Dodaj zakład (1 linia = 1 zakład)',
+      add_apartment:'Dodaj mieszkania/adresy (1 linia = 1 mieszkanie)', save_lists:'Zapisz listy', refresh_lists:'Odśwież listy',
+      remove_pesel:'Usuń PESEL (wybór pracownika)', remove_plant:'Usuń zakład', remove_apartment:'Usuń mieszkanie/adres', remove_from_lists:'Usuń z list',
+      edit_emp_title:'Edytuj pracownika (wypełnił formularz)', refresh_emp:'Odśwież listę pracowników', load_edit:'Wczytaj do edycji',
+      save_emp_changes:'Zapisz zmiany pracownika', stats_title:'Statystyki wypełnienia formularza', refresh_stats:'Odśwież statystyki',
+      gen_test_db:'Generuj bazę testową', click_plant_missing:'Kliknij zakład, aby zobaczyć brakujące PESEL'
+      ,live_wait:'LIVE: oczekiwanie na dane…', live_updated:'LIVE: ostatnia aktualizacja ', missing_for:'Brakujące PESEL dla zakładu: ', all_done:'Wszyscy mają już wypełniony formularz.'
+    },
+    es: {
+      admin_title:'Panel de administrador', admin_sub:'Gestiona listas, trabajadores y estadísticas en un solo lugar.', admin_mode:'Modo administrador • LIVE',
+      admin_login_title:'Inicio de sesión de administrador', admin_login_sub:'Inicia sesión para gestionar listas PESEL / Planta / Vivienda.',
+      login:'Usuario', password:'Contraseña', admin_login_btn:'Entrar al panel admin', back_emp:'← Volver al panel del trabajador',
+      admin_auth_ok:'Autorización correcta.', auth_first:'Primero inicia sesión como administrador.', login_err:'Error de inicio de sesión: ',
+      list_refresh_err:'Error al refrescar listas: ', stats_err:'Error de estadísticas: ', missing_err:'Error al cargar PESEL faltantes: ',
+      save_ok:'Cambios del trabajador guardados.', save_err:'Error al guardar trabajador: ',
+      panel_lists_title:'Panel admin – listas del formulario', panel_lists_sub:'Agrega/elimina listas de PESEL, plantas y viviendas, y edita trabajadores guardados.',
+      plant_for_pesel:'Planta para la lista PESEL (primero selecciona)', add_pesel:'Agregar PESEL (1 línea = 1 PESEL)', add_plant:'Agregar planta (1 línea = 1 planta)',
+      add_apartment:'Agregar viviendas/direcciones (1 línea = 1 vivienda)', save_lists:'Guardar listas', refresh_lists:'Actualizar listas',
+      remove_pesel:'Eliminar PESEL (selección de trabajador)', remove_plant:'Eliminar planta', remove_apartment:'Eliminar vivienda/dirección', remove_from_lists:'Eliminar de listas',
+      edit_emp_title:'Editar trabajador (formulario completado)', refresh_emp:'Actualizar lista de trabajadores', load_edit:'Cargar para editar',
+      save_emp_changes:'Guardar cambios del trabajador', stats_title:'Estadísticas de formularios completados', refresh_stats:'Actualizar estadísticas',
+      gen_test_db:'Generar base de prueba', click_plant_missing:'Haz clic en una planta para ver PESEL faltantes'
+      ,live_wait:'LIVE: esperando datos…', live_updated:'LIVE: última actualización ', missing_for:'PESEL faltantes para la planta: ', all_done:'Todos ya completaron el formulario.'
+    }
+  };
+  const AUTO_ES = {
+    'Imię':'Nombre','Nazwisko':'Apellido','PESEL':'PESEL','Zakład':'Planta','Mieszkanie':'Vivienda','Email':'Correo electrónico',
+    'Telefon (z WhatsApp)':'Teléfono (con WhatsApp)','Konto bankowe':'Cuenta bancaria','Data urodzenia':'Fecha de nacimiento',
+    'Nr paszportu':'N.º de pasaporte','Ważność paszportu':'Vencimiento del pasaporte','Data przyjazdu':'Fecha de llegada',
+    'Pierwsza praca':'Primer trabajo','Prawo jazdy międzynarodowe':'Licencia internacional','Ważność prawa jazdy':'Vencimiento de licencia',
+    'Koszulka':'Camiseta','Bluza':'Sudadera','Spodnie':'Pantalón','Kurtka':'Chaqueta','Buty':'Zapatos','Notatki':'Notas'
+  };
+  function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
+  function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
+  function applyI18n(){
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('label').forEach(el => {
+      if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
+      el.textContent = getLang()==='es' ? (AUTO_ES[el.dataset.plText] || el.dataset.plText) : el.dataset.plText;
+    });
+    const liveBadge = document.getElementById('statsLiveBadge');
+    if (liveBadge && !liveBadge.dataset.updated) liveBadge.textContent = t('live_wait');
+    document.getElementById('langPL').classList.toggle('active', getLang()==='pl');
+    document.getElementById('langES').classList.toggle('active', getLang()==='es');
+    const search = document.getElementById('employeeSearch');
+    if (search) search.placeholder = getLang()==='es' ? 'Buscar por nombre, apellido, PESEL...' : 'Szukaj po imieniu, nazwisku, PESEL...';
+    const phone = document.getElementById('edit_phoneNumber');
+    if (phone) phone.placeholder = getLang()==='es' ? 'p.ej. 600700800' : 'np. 600700800';
+  }
+  function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
-  function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
+  function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus',t('auth_first'),'err'); return false; } return true; }
   function setSelectOptions(selectId, values, selectedValue = '') {
     const el = document.getElementById(selectId);
     if (!el) return;
@@ -142,7 +208,7 @@
         setSelectOptions('edit_plant', res.plants);
         setSelectOptions('edit_apartment', res.apartments);
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd odświeżania list: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('list_refresh_err')+err.message,'err'))
       .adminGetCoreLists(adminToken);
   }
 
@@ -150,13 +216,13 @@
     google.script.run
       .withSuccessHandler(res => {
         adminToken = res.token;
-        setStatus('adminAuthStatus','Autoryzacja poprawna.','ok');
+        setStatus('adminAuthStatus',t('admin_auth_ok'),'ok');
         document.getElementById('adminApp').classList.remove('hidden');
         refreshCoreLists();
         loadStats(true);
         startStatsRealtime();
       })
-      .withFailureHandler(err=>setStatus('adminAuthStatus','Błąd logowania: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('adminAuthStatus',t('login_err')+err.message,'err'))
       .adminLogin(document.getElementById('adminLogin').value.trim(), document.getElementById('adminPassword').value);
   };
 
@@ -267,8 +333,8 @@
     payload.oldSurname = document.getElementById('edit_surname').defaultValue || '';
 
     google.script.run
-      .withSuccessHandler(() => setStatus('importStatus', 'Zapisano zmiany pracownika.', 'ok'))
-      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu pracownika: '+err.message,'err'))
+      .withSuccessHandler(() => setStatus('importStatus', t('save_ok'), 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus',t('save_err')+err.message,'err'))
       .adminSaveEmployeeByAdmin(adminToken, payload);
   };
 
@@ -347,9 +413,11 @@
     google.script.run
       .withSuccessHandler(rows => {
         renderStats(rows);
-        document.getElementById('statsLiveBadge').textContent = `LIVE: ostatnia aktualizacja ${new Date().toLocaleTimeString('pl-PL')}`;
+        const badge = document.getElementById('statsLiveBadge');
+        badge.dataset.updated = '1';
+        badge.textContent = `${t('live_updated')}${new Date().toLocaleTimeString(getLang()==='es' ? 'es-ES' : 'pl-PL')}`;
       })
-      .withFailureHandler(err => !silent && setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
+      .withFailureHandler(err => !silent && setStatus('importStatus',t('stats_err')+err.message,'err'))
       .getAdminStats(adminToken);
   }
 
@@ -364,16 +432,19 @@
     if (!requireAdmin()) return;
     google.script.run
       .withSuccessHandler(rows => {
-        document.getElementById('missingListTitle').textContent = `Brakujące PESEL dla zakładu: ${plant} (${rows.length})`;
+        document.getElementById('missingListTitle').textContent = `${t('missing_for')}${plant} (${rows.length})`;
         const list = document.getElementById('missingPeselList');
-        list.innerHTML = rows.length ? rows.map(p => `<li>${p}</li>`).join('') : '<li>Wszyscy mają już wypełniony formularz.</li>';
+        list.innerHTML = rows.length ? rows.map(p => `<li>${p}</li>`).join('') : `<li>${t('all_done')}</li>`;
       })
-      .withFailureHandler(err => setStatus('importStatus','Błąd pobierania brakujących PESEL: '+err.message,'err'))
+      .withFailureHandler(err => setStatus('importStatus',t('missing_err')+err.message,'err'))
       .getAdminMissingByPlant(adminToken, plant);
   }
 
   document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
   document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);
+  document.getElementById('langPL').onclick = () => setLang('pl');
+  document.getElementById('langES').onclick = () => setLang('es');
+  applyI18n();
   setEditIntlDrivingVisibility();
   document.getElementById('statsBody').addEventListener('click', e => {
     const btn = e.target.closest('.plant-link');
