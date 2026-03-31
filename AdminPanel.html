@@ -1,0 +1,36 @@
+<section class="card">
+  <h3 class="section-title">Panel admin – listy do formularza</h3>
+  <p class="section-sub">Wklej listy i zapisz. Dane trafią automatycznie do osobnych zakładek arkusza.</p>
+
+  <div class="grid">
+    <div>
+      <label>PESEL (wiele na raz, każdy w nowej linii)</label>
+      <textarea id="peselBulk" placeholder="90010112345\n92020254321"></textarea>
+    </div>
+    <div>
+      <label>Zakład (wiele na raz, każdy w nowej linii)</label>
+      <textarea id="plantBulk" placeholder="Krakow\nWarszawa"></textarea>
+    </div>
+    <div class="full">
+      <label>Mieszkanie / adres (wiele na raz, każdy w nowej linii)</label>
+      <textarea id="apartmentBulk" placeholder="ul. Testowa 1/2\nul. Próbna 5/8"></textarea>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="btn" id="saveListsBtn">Zapisz listy</button>
+    <button class="btn secondary" id="generateTestDbBtn">Generuj bazę testową</button>
+    <button class="btn secondary" id="refreshStatsBtn">Odśwież statystyki</button>
+  </div>
+
+  <div id="importStatus" class="status"></div>
+
+  <div class="divider"></div>
+  <div>
+    <h4 class="section-title">Statystyki wypełnienia formularza</h4>
+    <table>
+      <thead><tr><th>Zakład</th><th>Wypełnione</th><th>Wszystkie</th></tr></thead>
+      <tbody id="statsBody"></tbody>
+    </table>
+  </div>
+</section>
