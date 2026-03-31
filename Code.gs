@@ -469,31 +469,70 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
 
 function getAdminStats(adminToken) {
   assertAdmin_(adminToken);
-  const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
+  const pVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
-  const ch = headerMap_(cVals[0] || []);
+  const ph = headerMap_(pVals[0] || []);
   const sh = headerMap_(sVals[0] || []);
 
-  const all = {}, done = {};
-  const uAll = new Set(), uDone = new Set();
+  const allByPlant = {};
+  const doneByPlant = {};
 
-  for (let i = 1; i < cVals.length; i++) {
-    const plant = safe_(cVals[i][ch.plant] || cVals[i][ch.workplace]);
-    const key = `${safe_(cVals[i][ch.name])}|${safe_(cVals[i][ch.surname])}|${safe_(cVals[i][ch.pesel])}|${plant}`.toLowerCase();
-    if (!plant || key === '|||') continue;
-    if (!uAll.has(key)) { uAll.add(key); all[plant] = (all[plant] || 0) + 1; }
+  for (let i = 1; i < pVals.length; i++) {
+    const plant = safe_(pVals[i][ph.plant]);
+    const pesel = normalizePesel_(pVals[i][ph.pesel]);
+    if (!plant || !/^\d{11}$/.test(pesel)) continue;
+    if (!allByPlant[plant]) allByPlant[plant] = new Set();
+    allByPlant[plant].add(pesel);
   }
 
   for (let i = 1; i < sVals.length; i++) {
     const plant = safe_(sVals[i][sh.plant]);
-    const key = `${safe_(sVals[i][sh.name])}|${safe_(sVals[i][sh.surname])}|${safe_(sVals[i][sh.pesel])}|${plant}`.toLowerCase();
-    if (!plant || key === '|||') continue;
-    if (!uDone.has(key)) { uDone.add(key); done[plant] = (done[plant] || 0) + 1; }
+    const pesel = normalizePesel_(sVals[i][sh.pesel]);
+    if (!plant || !/^\d{11}$/.test(pesel)) continue;
+    if (!doneByPlant[plant]) doneByPlant[plant] = new Set();
+    doneByPlant[plant].add(pesel);
   }
 
-  return Object.keys(all).sort((a,b)=>a.localeCompare(b,'pl')).map(plant => ({
-    plant, completed: done[plant] || 0, total: all[plant] || 0
-  }));
+  const plants = [...new Set(Object.keys(allByPlant).concat(Object.keys(doneByPlant)))].sort((a,b)=>a.localeCompare(b,'pl'));
+  return plants.map(plant => {
+    const total = allByPlant[plant] ? allByPlant[plant].size : 0;
+    const completed = doneByPlant[plant]
+      ? [...doneByPlant[plant]].filter(p => !allByPlant[plant] || allByPlant[plant].has(p)).length
+      : 0;
+    const remaining = Math.max(0, total - completed);
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    return { plant, completed, total, remaining, percent };
+  });
+}
+
+function getAdminMissingByPlant(adminToken, plantName) {
+  assertAdmin_(adminToken);
+  const plant = safe_(plantName);
+  if (!plant) return [];
+
+  const pVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
+  const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
+  const ph = headerMap_(pVals[0] || []);
+  const sh = headerMap_(sVals[0] || []);
+
+  const all = new Set();
+  const done = new Set();
+
+  for (let i = 1; i < pVals.length; i++) {
+    const p = safe_(pVals[i][ph.plant]);
+    if (p !== plant) continue;
+    const pesel = normalizePesel_(pVals[i][ph.pesel]);
+    if (/^\d{11}$/.test(pesel)) all.add(pesel);
+  }
+
+  for (let i = 1; i < sVals.length; i++) {
+    const p = safe_(sVals[i][sh.plant]);
+    if (p !== plant) continue;
+    const pesel = normalizePesel_(sVals[i][sh.pesel]);
+    if (/^\d{11}$/.test(pesel)) done.add(pesel);
+  }
+
+  return [...all].filter(p => !done.has(p)).sort((a,b)=>a.localeCompare(b,'pl'));
 }
 
 

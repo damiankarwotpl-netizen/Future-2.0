@@ -15,7 +15,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input,textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
     textarea{min-height:120px}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
     .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
@@ -28,7 +28,21 @@
     th{background:#f8fafc}
     .divider{height:1px;background:#e2e8f0;margin:14px 0}
     .link{color:#4338ca;text-decoration:none;font-weight:600}
+    .live-badge{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-size:.82rem;font-weight:700;background:#ecfeff;color:#155e75;border:1px solid #a5f3fc}
+    .stats-summary{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+    .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px}
+    .kpi .label{font-size:.8rem;color:#64748b}
+    .kpi .value{font-size:1.3rem;font-weight:800;color:#1e1b4b}
+    .stats-layout{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
+    .stats-chart-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px}
+    .card-soft{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    #missingPeselList{margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto}
+    .stats-table{margin-top:10px}
+    .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
+    .plant-link:hover{text-decoration:underline}
+    .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
+    @media(max-width:900px){.stats-layout{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -53,6 +67,7 @@
 <script>
   let adminToken = null;
   let currentEmployeeKey = null;
+  let statsPollHandle = null;
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
   function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
 
@@ -100,6 +115,8 @@
         setStatus('adminAuthStatus','Autoryzacja poprawna.','ok');
         document.getElementById('adminApp').classList.remove('hidden');
         refreshCoreLists();
+        loadStats(true);
+        startStatsRealtime();
       })
       .withFailureHandler(err=>setStatus('adminAuthStatus','Błąd logowania: '+err.message,'err'))
       .adminLogin(document.getElementById('adminLogin').value.trim(), document.getElementById('adminPassword').value);
@@ -109,7 +126,10 @@
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(res => setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok'))
+      .withSuccessHandler(res => {
+        setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu list: '+err.message,'err'))
       .adminSaveCoreLists(adminToken, {
         pesels: document.getElementById('peselBulk').value,
@@ -128,7 +148,10 @@
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(() => setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok'))
+      .withSuccessHandler(() => {
+        setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
       .adminRemoveFromLists(adminToken, {
         peselKey: document.getElementById('peselRemoveSelect').value,
@@ -204,28 +227,121 @@
       .adminSaveEmployeeByAdmin(adminToken, payload);
   };
 
-  document.getElementById('refreshStatsBtn').onclick = () => {
-    if (!requireAdmin()) return;
+  function renderStats(rows) {
+    const body = document.getElementById('statsBody');
+    body.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><button class="plant-link" data-plant="${r.plant}">${r.plant}</button></td>
+        <td>${r.completed}</td>
+        <td>${r.remaining}</td>
+        <td>${r.total}</td>
+        <td><span class="progress-pill">${r.percent}%</span></td>
+      `;
+      body.appendChild(tr);
+    });
 
+    const completed = rows.reduce((a, r) => a + r.completed, 0);
+    const total = rows.reduce((a, r) => a + r.total, 0);
+    const remaining = rows.reduce((a, r) => a + r.remaining, 0);
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    document.getElementById('statsSummary').innerHTML = `
+      <div class="kpi"><div class="label">Wypełnione</div><div class="value">${completed}</div></div>
+      <div class="kpi"><div class="label">Brakuje</div><div class="value">${remaining}</div></div>
+      <div class="kpi"><div class="label">Wszystkie osoby</div><div class="value">${total}</div></div>
+      <div class="kpi"><div class="label">Łączny postęp</div><div class="value">${percent}%</div></div>
+    `;
+    drawStatsChart(rows);
+  }
+
+  function drawStatsChart(rows) {
+    const canvas = document.getElementById('statsChart');
+    if (!canvas) return;
+    const parentWidth = canvas.parentElement.clientWidth - 20;
+    canvas.width = Math.max(520, parentWidth);
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, w, h);
+    if (!rows.length) return;
+
+    const chartTop = 24;
+    const chartBottom = h - 54;
+    const chartHeight = chartBottom - chartTop;
+    const maxTotal = Math.max(...rows.map(r => r.total), 1);
+    const barSpace = (w - 40) / rows.length;
+    const barW = Math.max(28, barSpace * 0.42);
+
+    rows.forEach((r, i) => {
+      const x = 20 + i * barSpace + (barSpace - barW) / 2;
+      const doneH = (r.completed / maxTotal) * chartHeight;
+      const remainH = (r.remaining / maxTotal) * chartHeight;
+      const yDone = chartBottom - doneH;
+      const yRemain = yDone - remainH;
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(x, chartTop, barW, chartHeight);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(x, yDone, barW, doneH);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(x, yRemain, barW, remainH);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '12px Inter, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(r.plant, x + barW / 2, h - 32);
+      ctx.fillText(`${r.completed}/${r.total}`, x + barW / 2, h - 16);
+    });
+  }
+
+  function loadStats(silent = false) {
+    if (!requireAdmin()) return;
     google.script.run
       .withSuccessHandler(rows => {
-        const body = document.getElementById('statsBody');
-        body.innerHTML = '';
-        rows.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.plant}</td><td>${r.completed}</td><td>${r.total}</td>`;
-          body.appendChild(tr);
-        });
+        renderStats(rows);
+        document.getElementById('statsLiveBadge').textContent = `LIVE: ostatnia aktualizacja ${new Date().toLocaleTimeString('pl-PL')}`;
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
+      .withFailureHandler(err => !silent && setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
       .getAdminStats(adminToken);
-  };
+  }
+
+  function startStatsRealtime() {
+    if (statsPollHandle) clearInterval(statsPollHandle);
+    statsPollHandle = setInterval(() => {
+      if (!document.hidden) loadStats(true);
+    }, 10000);
+  }
+
+  function showMissingPesels(plant) {
+    if (!requireAdmin()) return;
+    google.script.run
+      .withSuccessHandler(rows => {
+        document.getElementById('missingListTitle').textContent = `Brakujące PESEL dla zakładu: ${plant} (${rows.length})`;
+        const list = document.getElementById('missingPeselList');
+        list.innerHTML = rows.length ? rows.map(p => `<li>${p}</li>`).join('') : '<li>Wszyscy mają już wypełniony formularz.</li>';
+      })
+      .withFailureHandler(err => setStatus('importStatus','Błąd pobierania brakujących PESEL: '+err.message,'err'))
+      .getAdminMissingByPlant(adminToken, plant);
+  }
+
+  document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
+  document.getElementById('statsBody').addEventListener('click', e => {
+    const btn = e.target.closest('.plant-link');
+    if (!btn) return;
+    showMissingPesels(btn.dataset.plant || '');
+  });
 
   document.getElementById('generateTestDbBtn').onclick = () => {
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(res=>setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok'))
+      .withSuccessHandler(res=>{
+        setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd generowania bazy testowej: '+err.message,'err'))
       .adminGenerateTestDatabase(adminToken);
   };
