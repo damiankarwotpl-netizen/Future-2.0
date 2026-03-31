@@ -9,16 +9,9 @@
   <meta http-equiv="Expires" content="0" />
   <title>Panel pracownika</title>
   <script>
-    (function forceChromeOnAndroid(){
-      const ua = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(ua);
-      const isChrome = /Chrome/i.test(ua);
-      const alreadyIntent = location.href.startsWith('intent://');
-      if (isAndroid && !isChrome && !alreadyIntent) {
-        const target = location.href.replace(/^https:\/\//, '');
-        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
-      }
-    })();
+    // Nie wymuszamy już przekierowania intent:// na Androidzie.
+    // Poprzednia logika psuła URL Web App (Apps Script) na części urządzeń
+    // i skutkowała próbą otwierania błędnego adresu w Google Drive.
   </script>
   <style>
     :root{
