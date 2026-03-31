@@ -4,7 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <base target="_top">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Panel pracownika</title>
+  <script>
+    (function forceChromeOnAndroid(){
+      const ua = navigator.userAgent || '';
+      const isAndroid = /Android/i.test(ua);
+      const isChrome = /Chrome/i.test(ua);
+      const alreadyIntent = location.href.startsWith('intent://');
+      if (isAndroid && !isChrome && !alreadyIntent) {
+        const target = location.href.replace(/^https:\/\//, '');
+        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
+      }
+    })();
+  </script>
   <style>
     :root{
       --bg:#eef2ff;
