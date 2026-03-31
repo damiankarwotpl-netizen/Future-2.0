@@ -11,7 +11,8 @@ const CFG = {
   ADMIN_LOGIN: 'admin', // ZMIEŃ
   ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
-  MAX_UPLOAD_PDF_MB: 8
+  MAX_UPLOAD_PDF_MB: 8,
+  TEST_LOGIN_BYPASS_PESELS: ['99999999999'] // PESEL testowy - brak blokady po zapisie
 };
 
 const HEADER_SYNONYMS = {
@@ -43,7 +44,7 @@ function doGet(e) {
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 function include(filename) {
@@ -139,11 +140,27 @@ function loginByIdentity(identity) {
   const pesel = normalizePesel_(identity.pesel);
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
+  // Blokada ponownego logowania po wcześniejszym zapisie formularza
+  const subVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
+  const subHeader = headerMap_(subVals[0] || []);
+  const bypassLoginBlock = (CFG.TEST_LOGIN_BYPASS_PESELS || []).includes(pesel);
+  const alreadySubmitted = subVals.slice(1).some(r => normalizePesel_(r[subHeader.pesel]) === pesel);
+  if (alreadySubmitted && !bypassLoginBlock) {
+    throw new Error('Formularz dla tego PESEL został już zapisany. Ponowne logowanie jest zablokowane.');
+  }
+
   const peselVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const ph = headerMap_(peselVals[0] || []);
   const peselRows = peselVals.slice(1).filter(r => safe_(r[ph.pesel]) === pesel);
-  if (!peselRows.length) throw new Error('PESEL nie jest na liście logowania.');
-  const plantOptions = [...new Set(peselRows.map(r => safe_(r[ph.plant])).filter(Boolean))];
+  if (!peselRows.length && !bypassLoginBlock) throw new Error('PESEL nie jest na liście logowania.');
+
+  let plantOptions = [...new Set(peselRows.map(r => safe_(r[ph.plant])).filter(Boolean))];
+  if (!plantOptions.length && bypassLoginBlock) {
+    const plantVals = getSheet_(CFG.PLANT_LIST_SHEET).getDataRange().getValues();
+    const plh = headerMap_(plantVals[0] || []);
+    plantOptions = [...new Set(plantVals.slice(1).map(r => safe_(r[plh.plant])).filter(Boolean))];
+  }
+  if (!plantOptions.length) plantOptions = ['Krakow'];
 
   const apartmentVals = getSheet_(CFG.APARTMENT_LIST_SHEET).getDataRange().getValues();
   const ah = headerMap_(apartmentVals[0] || []);
@@ -469,31 +486,70 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
 
 function getAdminStats(adminToken) {
   assertAdmin_(adminToken);
-  const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
+  const pVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
-  const ch = headerMap_(cVals[0] || []);
+  const ph = headerMap_(pVals[0] || []);
   const sh = headerMap_(sVals[0] || []);
 
-  const all = {}, done = {};
-  const uAll = new Set(), uDone = new Set();
+  const allByPlant = {};
+  const doneByPlant = {};
 
-  for (let i = 1; i < cVals.length; i++) {
-    const plant = safe_(cVals[i][ch.plant] || cVals[i][ch.workplace]);
-    const key = `${safe_(cVals[i][ch.name])}|${safe_(cVals[i][ch.surname])}|${safe_(cVals[i][ch.pesel])}|${plant}`.toLowerCase();
-    if (!plant || key === '|||') continue;
-    if (!uAll.has(key)) { uAll.add(key); all[plant] = (all[plant] || 0) + 1; }
+  for (let i = 1; i < pVals.length; i++) {
+    const plant = safe_(pVals[i][ph.plant]);
+    const pesel = normalizePesel_(pVals[i][ph.pesel]);
+    if (!plant || !/^\d{11}$/.test(pesel)) continue;
+    if (!allByPlant[plant]) allByPlant[plant] = new Set();
+    allByPlant[plant].add(pesel);
   }
 
   for (let i = 1; i < sVals.length; i++) {
     const plant = safe_(sVals[i][sh.plant]);
-    const key = `${safe_(sVals[i][sh.name])}|${safe_(sVals[i][sh.surname])}|${safe_(sVals[i][sh.pesel])}|${plant}`.toLowerCase();
-    if (!plant || key === '|||') continue;
-    if (!uDone.has(key)) { uDone.add(key); done[plant] = (done[plant] || 0) + 1; }
+    const pesel = normalizePesel_(sVals[i][sh.pesel]);
+    if (!plant || !/^\d{11}$/.test(pesel)) continue;
+    if (!doneByPlant[plant]) doneByPlant[plant] = new Set();
+    doneByPlant[plant].add(pesel);
   }
 
-  return Object.keys(all).sort((a,b)=>a.localeCompare(b,'pl')).map(plant => ({
-    plant, completed: done[plant] || 0, total: all[plant] || 0
-  }));
+  const plants = [...new Set(Object.keys(allByPlant).concat(Object.keys(doneByPlant)))].sort((a,b)=>a.localeCompare(b,'pl'));
+  return plants.map(plant => {
+    const total = allByPlant[plant] ? allByPlant[plant].size : 0;
+    const completed = doneByPlant[plant]
+      ? [...doneByPlant[plant]].filter(p => !allByPlant[plant] || allByPlant[plant].has(p)).length
+      : 0;
+    const remaining = Math.max(0, total - completed);
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    return { plant, completed, total, remaining, percent };
+  });
+}
+
+function getAdminMissingByPlant(adminToken, plantName) {
+  assertAdmin_(adminToken);
+  const plant = safe_(plantName);
+  if (!plant) return [];
+
+  const pVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
+  const sVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
+  const ph = headerMap_(pVals[0] || []);
+  const sh = headerMap_(sVals[0] || []);
+
+  const all = new Set();
+  const done = new Set();
+
+  for (let i = 1; i < pVals.length; i++) {
+    const p = safe_(pVals[i][ph.plant]);
+    if (p !== plant) continue;
+    const pesel = normalizePesel_(pVals[i][ph.pesel]);
+    if (/^\d{11}$/.test(pesel)) all.add(pesel);
+  }
+
+  for (let i = 1; i < sVals.length; i++) {
+    const p = safe_(sVals[i][sh.plant]);
+    if (p !== plant) continue;
+    const pesel = normalizePesel_(sVals[i][sh.pesel]);
+    if (/^\d{11}$/.test(pesel)) done.add(pesel);
+  }
+
+  return [...all].filter(p => !done.has(p)).sort((a,b)=>a.localeCompare(b,'pl'));
 }
 
 
