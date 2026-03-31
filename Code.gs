@@ -139,6 +139,14 @@ function loginByIdentity(identity) {
   const pesel = normalizePesel_(identity.pesel);
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
+  // Blokada ponownego logowania po wcześniejszym zapisie formularza
+  const subVals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
+  const subHeader = headerMap_(subVals[0] || []);
+  const alreadySubmitted = subVals.slice(1).some(r => normalizePesel_(r[subHeader.pesel]) === pesel);
+  if (alreadySubmitted) {
+    throw new Error('Formularz dla tego PESEL został już zapisany. Ponowne logowanie jest zablokowane.');
+  }
+
   const peselVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const ph = headerMap_(peselVals[0] || []);
   const peselRows = peselVals.slice(1).filter(r => safe_(r[ph.pesel]) === pesel);
