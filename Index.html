@@ -121,8 +121,6 @@
     document.getElementById('f_email').value = employee.email || '';
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
-    document.getElementById('f_apartment').value = employee.apartment || '';
-    document.getElementById('f_hireDate').value = employee.hireDate || '';
     document.getElementById('f_bankAccount').value = employee.bankAccount || '';
     document.getElementById('f_birthDate').value = employee.birthDate || '';
     document.getElementById('f_passportNumber').value = employee.passportNumber || '';
@@ -177,8 +175,8 @@
       email: document.getElementById('f_email').value.trim(),
       phonePrefix: document.getElementById('f_phonePrefix').value,
       phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
-      apartment: document.getElementById('f_apartment').value.trim(),
-      hireDate: document.getElementById('f_hireDate').value.trim(),
+      apartment: '',
+      hireDate: '',
       bankAccount: document.getElementById('f_bankAccount').value.trim(),
       birthDate: document.getElementById('f_birthDate').value,
       passportNumber: document.getElementById('f_passportNumber').value.trim(),
