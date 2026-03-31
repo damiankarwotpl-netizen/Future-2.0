@@ -3,19 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base target="_top">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Panel pracownika</title>
+  <script>
+    (function forceChromeOnAndroid(){
+      const ua = navigator.userAgent || '';
+      const isAndroid = /Android/i.test(ua);
+      const isChrome = /Chrome/i.test(ua);
+      const alreadyIntent = location.href.startsWith('intent://');
+      if (isAndroid && !isChrome && !alreadyIntent) {
+        const target = location.href.replace(/^https:\/\//, '');
+        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
+      }
+    })();
+  </script>
   <style>
     :root{
-      --bg:#f3f6ff;
+      --bg:#eef2ff;
       --card:#ffffff;
       --text:#0f172a;
       --muted:#64748b;
       --primary:#4f46e5;
-      --primary-2:#4338ca;
+      --primary-2:#3730a3;
       --border:#dbe4ff;
       --ok:#047857;
       --err:#b91c1c;
-      --shadow:0 10px 28px rgba(44,62,120,.08);
+      --shadow:0 14px 36px rgba(30,41,90,.12);
     }
     *{box-sizing:border-box}
     body{
@@ -23,55 +39,76 @@
       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       color:var(--text);
       background:
-        radial-gradient(circle at top right, #dbe4ff 0%, transparent 40%),
-        radial-gradient(circle at top left, #eef2ff 0%, transparent 45%),
+        radial-gradient(circle at top right, #c7d2fe 0%, transparent 36%),
+        radial-gradient(circle at top left, #e0e7ff 0%, transparent 44%),
         var(--bg);
+      min-height:100vh;
     }
-    .container{max-width:1100px;margin:28px auto;padding:0 14px 28px}
-    .hero{margin-bottom:16px}
-    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .container{max-width:1140px;margin:30px auto;padding:0 16px 32px;position:relative}
+    .hero{margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .hero h1{margin:0 0 6px;font-size:1.65rem;letter-spacing:.2px}
     .hero p{margin:0;color:var(--muted)}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease;position:relative;overflow:hidden}
+    .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#6366f1,#4338ca)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease}
+    input:hover,select:hover,textarea:hover{border-color:#94a3b8}
     input:focus,select:focus,textarea:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
     textarea{min-height:90px}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
+    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.26)}
+    .btn:hover{filter:brightness(1.03)}
     .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
     .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}
     .err{color:var(--err);background:#fef2f2;border-color:#fecaca}
-    .admin-link{display:inline-block;margin-top:4px;color:#4338ca;text-decoration:none;font-weight:600}
+    .admin-link{display:inline-block;margin-top:8px;color:#4338ca;text-decoration:none;font-weight:700}
     .admin-link:hover{text-decoration:underline}
     .hidden{display:none}
+    .success-screen{position:fixed;inset:0;background:linear-gradient(180deg,#eef2ff,#e0e7ff);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+    .success-screen.hidden{display:none}
+    .success-card{max-width:620px;width:100%;background:#fff;border:1px solid #c7d2fe;border-radius:22px;padding:30px;text-align:center;box-shadow:0 24px 50px rgba(30,41,90,.2)}
+    .success-title{margin:0 0 10px;font-size:1.6rem;color:#1e1b4b}
+    .success-sub{margin:0;color:#475569}
+    .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
+    .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
+    .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
   </style>
 </head>
 <body>
+<div class="lang-switch">
+  <button class="flag-btn" id="langPL" title="Polski">🇵🇱</button>
+  <button class="flag-btn" id="langES" title="Español">🇪🇸</button>
+</div>
 <div class="container">
   <header class="hero">
-    <h1>Formularz pracownika</h1>
-    <p>Podaj PESEL, aby rozpocząć formularz.</p>
+    <div>
+      <h1 data-i18n="emp_title">Formularz pracownika</h1>
+      <p data-i18n="emp_subtitle">Nowoczesny panel do szybkiego uzupełniania danych pracownika.</p>
+    </div>
+    <div class="hero-badge" data-i18n="secure_session">Bezpieczna sesja</div>
   </header>
 
   <section class="card">
-    <h3 class="section-title">Logowanie pracownika</h3>
-    <p class="section-sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
+    <h3 class="section-title" data-i18n="login_title">Logowanie pracownika</h3>
+    <p class="section-sub" data-i18n="login_sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
-      <div class="full"><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
+      <div class="full"><label data-i18n="pesel">PESEL</label><input id="loginPesel" maxlength="11"></div>
     </div>
-    <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
+    <div class="row"><button class="btn" id="loginBtn" data-i18n="login_btn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
-    <a class="admin-link" href="<?= adminUrl ?>">Przejdź do panelu administratora</a>
+    <a class="admin-link" href="<?= adminUrl ?>" target="_top" rel="noopener" data-i18n="go_admin">Przejdź do panelu administratora</a>
   </section>
 
   <section class="card hidden" id="employeeFormWrap">
-    <h3 class="section-title">Formularz pracownika</h3>
-    <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
+    <h3 class="section-title" data-i18n="form_title">Formularz pracownika</h3>
+    <p class="section-sub" data-i18n="form_sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
     <div class="grid">
       <div><label>Imię</label><input id="f_name"></div>
       <div><label>Nazwisko</label><input id="f_surname"></div>
@@ -100,15 +137,83 @@
       <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
       <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
     </div>
-    <div class="row"><button class="btn" id="saveFormBtn">Zapisz formularz</button></div>
+    <div class="row"><button class="btn" id="saveFormBtn" data-i18n="save_form">Zapisz formularz</button></div>
     <div id="formStatus" class="status"></div>
   </section>
 </div>
+<section id="successScreen" class="success-screen hidden">
+  <div class="success-card">
+    <h2 class="success-title" id="successTitle">Dziękujemy, dane zostały zapisane prawidłowo.</h2>
+    <p class="success-sub" id="successSub">Za chwilę nastąpi przekierowanie…</p>
+  </div>
+</section>
 
 <script>
   let sessionToken = null;
+  let formLocked = false;
+  const I18N = {
+    pl: {
+      emp_title:'Formularz pracownika', emp_subtitle:'Nowoczesny panel do szybkiego uzupełniania danych pracownika.',
+      secure_session:'Bezpieczna sesja', login_title:'Logowanie pracownika', login_sub:'Panel administratora jest dostępny pod osobnym linkiem.',
+      pesel:'PESEL', login_btn:'Zaloguj', go_admin:'Przejdź do panelu administratora', form_title:'Formularz pracownika',
+      form_sub:'Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.', save_form:'Zapisz formularz',
+      form_ready:'OK - formularz gotowy do edycji.', login_first:'Najpierw zaloguj się.',
+      autosave_ok:'Zapisano.', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
+      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…'
+    },
+    es: {
+      emp_title:'Formulario del trabajador', emp_subtitle:'Panel moderno para completar rápidamente los datos del trabajador.',
+      secure_session:'Sesión segura', login_title:'Inicio de sesión del trabajador', login_sub:'El panel de administrador está disponible en un enlace separado.',
+      pesel:'PESEL', login_btn:'Iniciar sesión', go_admin:'Ir al panel de administrador', form_title:'Formulario del trabajador',
+      form_sub:'Después de iniciar sesión con PESEL puedes completar y guardar los datos.', save_form:'Guardar formulario',
+      form_ready:'OK - formulario listo para editar.', login_first:'Primero inicia sesión.',
+      autosave_ok:'Guardado.', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
+      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…'
+    }
+  };
+  const AUTO_ES = {
+    'Imię':'Nombre','Nazwisko':'Apellido','Telefon (z WhatsApp)':'Teléfono (con WhatsApp)','Email':'Correo electrónico','Zakład':'Planta',
+    'Mieszkanie':'Vivienda','Numer konta bankowego':'Número de cuenta bancaria','Data urodzenia':'Fecha de nacimiento',
+    'Numer paszportu':'Número de pasaporte','Data ważności paszportu':'Fecha de vencimiento del pasaporte',
+    'Data przyjazdu do Polski':'Fecha de llegada a Polonia','Data rozpoczęcia pierwszej pracy':'Fecha del inicio del primer trabajo',
+    'Czy posiadasz prawo jazdy międzynarodowe?':'¿Tienes licencia de conducir internacional?',
+    'Data ważności prawa jazdy':'Fecha de vencimiento de la licencia','Zdjęcie prawa jazdy':'Foto de la licencia',
+    'Rozmiary ubrań':'Tallas de ropa','Koszulka':'Camiseta','Bluza':'Sudadera','Kurtka':'Chaqueta','Spodnie':'Pantalón',
+    'Buty':'Zapatos','Notatki':'Notas','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)'
+  };
+  function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
+  function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
+  function applyI18n(){
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('label, h4.section-title').forEach(el => {
+      if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
+      el.textContent = getLang()==='es' ? (AUTO_ES[el.dataset.plText] || el.dataset.plText) : el.dataset.plText;
+    });
+    document.getElementById('langPL').classList.toggle('active', getLang()==='pl');
+    document.getElementById('langES').classList.toggle('active', getLang()==='es');
+    document.getElementById('f_phoneNumber').placeholder = getLang()==='es' ? 'p.ej. 600700800' : 'np. 600700800';
+    const intl = document.getElementById('f_intlDrivingLicense');
+    if (intl) {
+      intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
+      intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
+    }
+  }
+  function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
 
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
+  function lockFormUi() {
+    formLocked = true;
+    document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea, #employeeFormWrap button, #loginBtn, #loginPesel').forEach(el => {
+      el.disabled = true;
+    });
+  }
+  function showSuccessAndRedirect() {
+    lockFormUi();
+    document.getElementById('successTitle').textContent = t('thanks_saved');
+    document.getElementById('successSub').textContent = t('redirect_in');
+    document.getElementById('successScreen').classList.remove('hidden');
+    setTimeout(() => { window.location.href = 'https://www.google.com'; }, 5000);
+  }
 
 
   function setSelectOptions(selectId, values, fallback) {
@@ -178,10 +283,10 @@
         sessionToken = res.token;
         fillEmployeeForm(res.employee || {});
         document.getElementById('employeeFormWrap').classList.remove('hidden');
-        setStatus('loginStatus','OK - formularz gotowy do edycji.','ok');
+        setStatus('loginStatus',t('form_ready'),'ok');
         setStatus('formStatus','', '');
       })
-      .withFailureHandler(err=>setStatus('loginStatus','Błąd: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('loginStatus',t('login_error')+err.message,'err'))
       .loginByIdentity({
         pesel:document.getElementById('loginPesel').value.trim()
       });
@@ -237,7 +342,7 @@
   }
 
   async function saveForm(autoMode = false, includeFiles = false) {
-    if (!sessionToken) return;
+    if (!sessionToken || formLocked) return;
 
     try {
       const payload = await buildPayload(includeFiles);
@@ -245,25 +350,34 @@
         .withSuccessHandler(res => {
           if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
           if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
-          setStatus('formStatus', autoMode ? 'Autozapis OK' : (res.message || 'Zapisano.'), 'ok');
+          setStatus('formStatus', autoMode ? t('autosave_ok') : (res.message || t('saved_ok')), 'ok');
+          if (!autoMode) showSuccessAndRedirect();
         })
-        .withFailureHandler(err => setStatus('formStatus', 'Błąd zapisu: ' + err.message, 'err'))
+        .withFailureHandler(err => setStatus('formStatus', t('save_error') + err.message, 'err'))
         .saveEmployeeForm(payload);
     } catch (err) {
-      setStatus('formStatus', 'Błąd przygotowania danych: ' + err.message, 'err');
+      setStatus('formStatus', t('prep_error') + err.message, 'err');
     }
   }
 
   function scheduleAutoSave() {
-    if (!sessionToken) return;
+    if (!sessionToken || formLocked) return;
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
   }
 
   document.getElementById('saveFormBtn').onclick = async () => {
-    if (!sessionToken) return setStatus('formStatus','Najpierw zaloguj się.','err');
+    if (!sessionToken) return setStatus('formStatus',t('login_first'),'err');
     await saveForm(false, true);
   };
+  document.getElementById('langPL').onclick = () => setLang('pl');
+  document.getElementById('langES').onclick = () => setLang('es');
+  applyI18n();
+  if (!(window.google && google.script && google.script.run)) {
+    setStatus('loginStatus', getLang()==='es'
+      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+  }
 
   // Autozapis danych tekstowych/wyborów
   document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
