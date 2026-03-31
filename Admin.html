@@ -70,6 +70,28 @@
   let statsPollHandle = null;
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
   function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
+  function setSelectOptions(selectId, values, selectedValue = '') {
+    const el = document.getElementById(selectId);
+    if (!el) return;
+    el.innerHTML = '';
+    values.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      el.appendChild(opt);
+    });
+    if (selectedValue && values.includes(selectedValue)) el.value = selectedValue;
+  }
+  function parsePhone(phoneRaw = '') {
+    const raw = String(phoneRaw || '').trim();
+    if (raw.startsWith('+57')) return { prefix:'+57', number:raw.replace('+57','').trim() };
+    if (raw.startsWith('+48')) return { prefix:'+48', number:raw.replace('+48','').trim() };
+    return { prefix:'+48', number:raw };
+  }
+  function setEditIntlDrivingVisibility() {
+    const show = document.getElementById('edit_intlDrivingLicense').value === 'tak';
+    document.getElementById('editIntlDrivingExpiryWrap').classList.toggle('hidden', !show);
+  }
 
   function refreshCoreLists(){
     if (!requireAdmin()) return;
@@ -103,6 +125,9 @@
           o.textContent = item.label;
           peselSel.appendChild(o);
         });
+
+        setSelectOptions('edit_plant', res.plants);
+        setSelectOptions('edit_apartment', res.apartments);
       })
       .withFailureHandler(err=>setStatus('importStatus','Błąd odświeżania list: '+err.message,'err'))
       .adminGetCoreLists(adminToken);
@@ -196,10 +221,16 @@
 
     google.script.run
       .withSuccessHandler(emp => {
+        const phone = parsePhone(emp.phone || '');
         Object.keys(emp).forEach(k => {
           const el = document.getElementById(`edit_${k}`);
           if (el) { el.value = emp[k] || ''; el.defaultValue = emp[k] || ''; }
         });
+        document.getElementById('edit_phonePrefix').value = phone.prefix;
+        document.getElementById('edit_phoneNumber').value = phone.number;
+        document.getElementById('edit_phonePrefix').defaultValue = phone.prefix;
+        document.getElementById('edit_phoneNumber').defaultValue = phone.number;
+        setEditIntlDrivingVisibility();
       })
       .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
       .adminGetEmployeeForEdit(adminToken, key.pesel, key.plant);
@@ -210,12 +241,13 @@
 
     const payload = {};
     [
-      'name','surname','pesel','plant','apartment','email','phone','bankAccount','birthDate','passportNumber','passportExpiry',
+      'name','surname','pesel','plant','apartment','email','bankAccount','birthDate','passportNumber','passportExpiry',
       'arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','shirt','hoodie','pants','jacket','shoes','notes'
     ].forEach(k => {
       const el = document.getElementById(`edit_${k}`);
       payload[k] = el ? el.value : '';
     });
+    payload.phone = `${document.getElementById('edit_phonePrefix').value} ${document.getElementById('edit_phoneNumber').value.trim()}`.trim();
     payload.oldPesel = currentEmployeeKey ? currentEmployeeKey.pesel : '';
     payload.oldPlant = currentEmployeeKey ? currentEmployeeKey.plant : '';
     payload.oldName = document.getElementById('edit_name').defaultValue || '';
@@ -328,6 +360,8 @@
   }
 
   document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
+  document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);
+  setEditIntlDrivingVisibility();
   document.getElementById('statsBody').addEventListener('click', e => {
     const btn = e.target.closest('.plant-link');
     if (!btn) return;

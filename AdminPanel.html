@@ -51,10 +51,10 @@
       <div><label>Imię</label><input id="edit_name"></div>
       <div><label>Nazwisko</label><input id="edit_surname"></div>
       <div><label>PESEL</label><input id="edit_pesel"></div>
-      <div><label>Zakład</label><input id="edit_plant"></div>
-      <div><label>Mieszkanie</label><input id="edit_apartment"></div>
+      <div><label>Zakład</label><select id="edit_plant"></select></div>
+      <div><label>Mieszkanie</label><select id="edit_apartment"></select></div>
       <div><label>Email</label><input id="edit_email"></div>
-      <div><label>Telefon</label><input id="edit_phone"></div>
+      <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="edit_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="edit_phoneNumber" placeholder="np. 600700800"></div></div>
       <div><label>Konto bankowe</label><input id="edit_bankAccount"></div>
       <div><label>Data urodzenia</label><input id="edit_birthDate" type="date"></div>
       <div><label>Nr paszportu</label><input id="edit_passportNumber"></div>
@@ -62,12 +62,12 @@
       <div><label>Data przyjazdu</label><input id="edit_arrivalDate" type="date"></div>
       <div><label>Pierwsza praca</label><input id="edit_firstWorkDate" type="date"></div>
       <div><label>Prawo jazdy międzynarodowe</label><select id="edit_intlDrivingLicense"><option>nie</option><option>tak</option></select></div>
-      <div><label>Ważność prawa jazdy</label><input id="edit_intlDrivingLicenseExpiry" type="date"></div>
-      <div><label>Koszulka</label><input id="edit_shirt"></div>
-      <div><label>Bluza</label><input id="edit_hoodie"></div>
-      <div><label>Spodnie</label><input id="edit_pants"></div>
-      <div><label>Kurtka</label><input id="edit_jacket"></div>
-      <div><label>Buty</label><input id="edit_shoes"></div>
+      <div id="editIntlDrivingExpiryWrap"><label>Ważność prawa jazdy</label><input id="edit_intlDrivingLicenseExpiry" type="date"></div>
+      <div><label>Koszulka</label><select id="edit_shirt"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Bluza</label><select id="edit_hoodie"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Spodnie</label><select id="edit_pants"><option>46</option><option>48</option><option>50</option><option>52</option><option>54</option><option>56</option><option>58</option><option>60</option><option>62</option></select></div>
+      <div><label>Kurtka</label><select id="edit_jacket"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Buty</label><select id="edit_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
       <div class="full"><label>Notatki</label><textarea id="edit_notes"></textarea></div>
     </div>
 
