@@ -44,7 +44,7 @@ function doGet(e) {
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 function include(filename) {
@@ -152,8 +152,15 @@ function loginByIdentity(identity) {
   const peselVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const ph = headerMap_(peselVals[0] || []);
   const peselRows = peselVals.slice(1).filter(r => safe_(r[ph.pesel]) === pesel);
-  if (!peselRows.length) throw new Error('PESEL nie jest na liście logowania.');
-  const plantOptions = [...new Set(peselRows.map(r => safe_(r[ph.plant])).filter(Boolean))];
+  if (!peselRows.length && !bypassLoginBlock) throw new Error('PESEL nie jest na liście logowania.');
+
+  let plantOptions = [...new Set(peselRows.map(r => safe_(r[ph.plant])).filter(Boolean))];
+  if (!plantOptions.length && bypassLoginBlock) {
+    const plantVals = getSheet_(CFG.PLANT_LIST_SHEET).getDataRange().getValues();
+    const plh = headerMap_(plantVals[0] || []);
+    plantOptions = [...new Set(plantVals.slice(1).map(r => safe_(r[plh.plant])).filter(Boolean))];
+  }
+  if (!plantOptions.length) plantOptions = ['Krakow'];
 
   const apartmentVals = getSheet_(CFG.APARTMENT_LIST_SHEET).getDataRange().getValues();
   const ah = headerMap_(apartmentVals[0] || []);
