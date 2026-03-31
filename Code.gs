@@ -98,42 +98,61 @@ function loginByIdentity(identity) {
   const pesel = safe_(identity.pesel);
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
-  const vals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
-  if (vals.length < 2) throw new Error('Brak pracowników.');
+  const seedVals = getSheet_(CFG.LOGIN_SEED_SHEET).getDataRange().getValues();
+  if (seedVals.length < 2) throw new Error('Brak pracowników w bazie login_seed.');
+  const seedH = headerMap_(seedVals[0]);
 
-  const h = headerMap_(vals[0]);
-  const matches = [];
-
-  for (let i = 1; i < vals.length; i++) {
-    const p = safe_(vals[i][h.pesel]);
+  const seedMatches = [];
+  for (let i = 1; i < seedVals.length; i++) {
+    const p = safe_(seedVals[i][seedH.pesel]);
     if (p !== pesel) continue;
-
-    const n = safe_(vals[i][h.name]);
-    const s = safe_(vals[i][h.surname]);
-    const pl = safe_(vals[i][h.plant] || vals[i][h.workplace]);
-
-    matches.push({
-      name:n, surname:s, pesel:p, plant:pl,
-      email:safe_(vals[i][h.email]),
-      phone:safe_(vals[i][h.phone]),
-      apartment:safe_(vals[i][h.apartment]),
-      hireDate:safe_(vals[i][h.hireDate]),
-      notes:safe_(vals[i][h.notes]),
-      bankAccount:safe_(vals[i][h.bankAccount]),
-      birthDate:safe_(vals[i][h.birthDate]),
-      passportNumber:safe_(vals[i][h.passportNumber]),
-      passportExpiry:safe_(vals[i][h.passportExpiry]),
-      arrivalDate:safe_(vals[i][h.arrivalDate]),
-      firstWorkDate:safe_(vals[i][h.firstWorkDate]),
-      intlDrivingLicense:safe_(vals[i][h.intlDrivingLicense]),
-      intlDrivingLicenseExpiry:safe_(vals[i][h.intlDrivingLicenseExpiry])
+    seedMatches.push({
+      name: safe_(seedVals[i][seedH.name]),
+      surname: safe_(seedVals[i][seedH.surname]),
+      pesel: p,
+      plant: safe_(seedVals[i][seedH.plant])
     });
   }
 
-  if (!matches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
-  if (matches.length > 1) throw new Error('Wykryto więcej niż jednego pracownika z tym PESEL. Skontaktuj się z administratorem.');
+  if (!seedMatches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
+  if (seedMatches.length > 1) throw new Error('Wykryto więcej niż jednego pracownika z tym PESEL w login_seed. Skontaktuj się z administratorem.');
 
-  const found = matches[0];
+  const base = seedMatches[0];
+
+  const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
+  const ch = headerMap_(cVals[0] || []);
+  let found = {
+    ...base,
+    email:'', phone:'', apartment:'', hireDate:'', notes:'',
+    bankAccount:'', birthDate:'', passportNumber:'', passportExpiry:'',
+    arrivalDate:'', firstWorkDate:'', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:''
+  };
+
+  for (let i = 1; i < cVals.length; i++) {
+    const keyPesel = safe_(cVals[i][ch.pesel]);
+    const keyPlant = safe_(cVals[i][ch.plant] || cVals[i][ch.workplace]);
+    if (keyPesel === base.pesel && keyPlant.toLowerCase() === base.plant.toLowerCase()) {
+      found = {
+        ...found,
+        name: safe_(cVals[i][ch.name]) || base.name,
+        surname: safe_(cVals[i][ch.surname]) || base.surname,
+        email: safe_(cVals[i][ch.email]),
+        phone: safe_(cVals[i][ch.phone]),
+        apartment: safe_(cVals[i][ch.apartment]),
+        hireDate: safe_(cVals[i][ch.hireDate]),
+        notes: safe_(cVals[i][ch.notes]),
+        bankAccount: safe_(cVals[i][ch.bankAccount]),
+        birthDate: safe_(cVals[i][ch.birthDate]),
+        passportNumber: safe_(cVals[i][ch.passportNumber]),
+        passportExpiry: safe_(cVals[i][ch.passportExpiry]),
+        arrivalDate: safe_(cVals[i][ch.arrivalDate]),
+        firstWorkDate: safe_(cVals[i][ch.firstWorkDate]),
+        intlDrivingLicense: safe_(cVals[i][ch.intlDrivingLicense]) || 'nie',
+        intlDrivingLicenseExpiry: safe_(cVals[i][ch.intlDrivingLicenseExpiry])
+      };
+      break;
+    }
+  }
 
   const clothes = getClothesData_(found.name, found.surname, found.plant);
   const phone = parsePhone_(found.phone);
