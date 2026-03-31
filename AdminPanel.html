@@ -10,6 +10,7 @@
         <option value="login_seed">login_seed</option>
         <option value="kontakty">kontakty</option>
         <option value="ubrania_robocze">ubrania_robocze</option>
+        <option value="employee_registry">employee_registry (PESEL+zakład+mieszkanie)</option>
       </select>
     </div>
   </div>
@@ -32,5 +33,14 @@
         <tbody id="previewBody"></tbody>
       </table>
     </div>
+  </div>
+  <div class="divider"></div>
+  <div>
+    <h4 class="section-title">Statystyki wypełnienia formularza</h4>
+    <div class="row"><button class="btn secondary" id="refreshStatsBtn">Odśwież statystyki</button></div>
+    <table>
+      <thead><tr><th>Zakład</th><th>Wypełnione</th><th>Wszystkie</th></tr></thead>
+      <tbody id="statsBody"></tbody>
+    </table>
   </div>
 </section>

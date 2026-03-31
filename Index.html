@@ -110,6 +110,20 @@
 
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
 
+
+  function setSelectOptions(selectId, values, fallback) {
+    const el = document.getElementById(selectId);
+    if (!values || !values.length) return;
+    el.innerHTML = '';
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      el.appendChild(o);
+    });
+    if (fallback) el.value = fallback;
+  }
+
   function setIntlDrivingVisibility(){
     const show = document.getElementById('f_intlDrivingLicense').value === 'tak';
     document.getElementById('intlDrivingExpiryWrap').classList.toggle('hidden', !show);
@@ -121,8 +135,10 @@
     document.getElementById('f_surname').value = employee.surname || '';
     document.getElementById('f_pesel').value = employee.pesel || '';
     document.getElementById('f_email').value = employee.email || '';
-    document.getElementById('f_plant').value = employee.plant || 'Krakow';
-    document.getElementById('f_apartment').value = employee.apartment || 'Mieszkanie 1';
+    setSelectOptions('f_plant', employee.plantOptions, employee.plant || 'Krakow');
+    setSelectOptions('f_apartment', employee.apartmentOptions, employee.apartment || 'Mieszkanie 1');
+    document.getElementById('f_plant').value = employee.plant || document.getElementById('f_plant').value;
+    document.getElementById('f_apartment').value = employee.apartment || document.getElementById('f_apartment').value;
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
     document.getElementById('f_bankAccount').value = employee.bankAccount || '';

@@ -3,6 +3,7 @@ const CFG = {
   CONTACTS_SHEET: 'kontakty',
   CLOTHES_SHEET: 'ubrania_robocze',
   SUBMISSIONS_SHEET: 'form_submissions',
+  REGISTRY_SHEET: 'employee_registry',
   ROOT_FOLDER_NAME: 'Flota_Formularze_Pracownikow',
   ADMIN_LOGIN: 'admin', // ZMIEŃ
   ADMIN_PASSWORD: 'admin123', // ZMIEŃ
@@ -54,12 +55,15 @@ function initAll() {
   const contacts = getOrCreateSheet_(ss, CFG.CONTACTS_SHEET);
   const clothes = getOrCreateSheet_(ss, CFG.CLOTHES_SHEET);
   const submissions = getOrCreateSheet_(ss, CFG.SUBMISSIONS_SHEET);
+  const registry = getOrCreateSheet_(ss, CFG.REGISTRY_SHEET);
 
   ensureHeader_(loginSeed, ['name','surname','pesel','plant']);
   ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry']);
   ensureHeader_(clothes, ['name','surname','plant','shirt','hoodie','pants','jacket','shoes']);
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
+  ensureHeader_(registry, ['pesel','name','surname','plant','apartment']);
 
+  syncRegistryToLoginSeed_();
   syncSeedToCoreTables_();
 }
 
@@ -92,32 +96,61 @@ function syncSeedToCoreTables_() {
   }
 }
 
+
+function syncRegistryToLoginSeed_() {
+  const regVals = getSheet_(CFG.REGISTRY_SHEET).getDataRange().getValues();
+  if (regVals.length < 2) return;
+  const rh = headerMap_(regVals[0]);
+
+  const seed = getSheet_(CFG.LOGIN_SEED_SHEET);
+  writeSheetData_(seed, ['name','surname','pesel','plant'], []);
+
+  const out = [];
+  const uniq = new Set();
+  for (let i = 1; i < regVals.length; i++) {
+    const pesel = safe_(regVals[i][rh.pesel]);
+    const name = safe_(regVals[i][rh.name]);
+    const surname = safe_(regVals[i][rh.surname]);
+    const plant = safe_(regVals[i][rh.plant]);
+    const key = `${pesel}|${plant}`.toLowerCase();
+    if (!pesel || !name || !surname || !plant || uniq.has(key)) continue;
+    uniq.add(key);
+    out.push([name, surname, pesel, plant]);
+  }
+
+  if (out.length) {
+    seed.getRange(2,1,out.length,4).setValues(out);
+  }
+}
+
 /* ======================== LOGIN + FORM ======================== */
 
 function loginByIdentity(identity) {
   const pesel = safe_(identity.pesel);
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
-  const seedVals = getSheet_(CFG.LOGIN_SEED_SHEET).getDataRange().getValues();
-  if (seedVals.length < 2) throw new Error('Brak pracowników w bazie login_seed.');
-  const seedH = headerMap_(seedVals[0]);
+  const regVals = getSheet_(CFG.REGISTRY_SHEET).getDataRange().getValues();
+  if (regVals.length < 2) throw new Error('Brak pracowników w bazie employee_registry.');
+  const rh = headerMap_(regVals[0]);
 
-  const seedMatches = [];
-  for (let i = 1; i < seedVals.length; i++) {
-    const p = safe_(seedVals[i][seedH.pesel]);
+  const regMatches = [];
+  for (let i = 1; i < regVals.length; i++) {
+    const p = safe_(regVals[i][rh.pesel]);
     if (p !== pesel) continue;
-    seedMatches.push({
-      name: safe_(seedVals[i][seedH.name]),
-      surname: safe_(seedVals[i][seedH.surname]),
+    regMatches.push({
+      name: safe_(regVals[i][rh.name]),
+      surname: safe_(regVals[i][rh.surname]),
       pesel: p,
-      plant: safe_(seedVals[i][seedH.plant])
+      plant: safe_(regVals[i][rh.plant]),
+      apartment: safe_(regVals[i][rh.apartment])
     });
   }
 
-  if (!seedMatches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
-  if (seedMatches.length > 1) throw new Error('Wykryto więcej niż jednego pracownika z tym PESEL w login_seed. Skontaktuj się z administratorem.');
+  if (!regMatches.length) throw new Error('Nie znaleziono pracownika dla podanego PESEL.');
 
-  const base = seedMatches[0];
+  const base = regMatches[0];
+  const plantOptions = [...new Set(regMatches.map(r => r.plant).filter(Boolean))];
+  const apartmentOptions = [...new Set(regMatches.map(r => r.apartment).filter(Boolean))];
 
   const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
   const ch = headerMap_(cVals[0] || []);
@@ -167,7 +200,7 @@ function loginByIdentity(identity) {
   return {
     ok:true,
     token,
-    employee:{ ...found, phonePrefix:phone.prefix, phoneNumber:phone.number, ...clothes }
+    employee:{ ...found, phonePrefix:phone.prefix, phoneNumber:phone.number, ...clothes, plantOptions, apartmentOptions }
   };
 }
 
@@ -330,11 +363,13 @@ function adminGenerateTestDatabase(adminToken) {
   const contacts = getSheet_(CFG.CONTACTS_SHEET);
   const clothes = getSheet_(CFG.CLOTHES_SHEET);
   const submissions = getSheet_(CFG.SUBMISSIONS_SHEET);
+  const registry = getSheet_(CFG.REGISTRY_SHEET);
 
   const loginSeedHeader = ['name','surname','pesel','plant'];
   const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
   const clothesHeader = ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
   const submissionsHeader = ['name','surname','pesel','plant','submittedAt'];
+  const registryHeader = ['pesel','name','surname','plant','apartment'];
 
   const employees = [
     {
@@ -364,6 +399,7 @@ function adminGenerateTestDatabase(adminToken) {
   ]));
   writeSheetData_(clothes, clothesHeader, employees.map(e => [e.name, e.surname, e.plant, e.shirt, e.hoodie, e.pants, e.jacket, e.shoes]));
   writeSheetData_(submissions, submissionsHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant, new Date().toISOString()]));
+  writeSheetData_(registry, registryHeader, employees.map(e => [e.pesel, e.name, e.surname, e.plant, e.apartment]));
 
   return { ok:true, generated: employees.length };
 }
@@ -459,6 +495,17 @@ function adminImportWithFieldSelection(adminToken, params) {
       return;
     }
 
+    if (targetTable === CFG.REGISTRY_SHEET) {
+      if (!rec.pesel || !rec.name || !rec.surname || !rec.plant) return;
+      upsertByKey_(target,
+        ['pesel','name','surname','plant','apartment'],
+        ['pesel','plant'],
+        { pesel:rec.pesel || '', name:rec.name || '', surname:rec.surname || '', plant:rec.plant || '', apartment:rec.apartment || '' }
+      );
+      imported++;
+      return;
+    }
+
     if (targetTable === CFG.CLOTHES_SHEET) {
       if (!rec.name || !rec.surname || !rec.plant) return;
       upsertByKey_(target,
@@ -473,6 +520,11 @@ function adminImportWithFieldSelection(adminToken, params) {
       return;
     }
   });
+
+  if (targetTable === CFG.REGISTRY_SHEET) {
+    syncRegistryToLoginSeed_();
+    syncSeedToCoreTables_();
+  }
 
   if (targetTable === CFG.LOGIN_SEED_SHEET) {
     syncSeedToCoreTables_();
@@ -559,6 +611,7 @@ function getAllowedFieldsForTarget_(targetTable) {
   if (targetTable === CFG.LOGIN_SEED_SHEET) return ['name','surname','pesel','plant'];
   if (targetTable === CFG.CONTACTS_SHEET) return ['name','surname','pesel','plant','email','phone','workplace','apartment','hireDate','notes','shoes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
   if (targetTable === CFG.CLOTHES_SHEET) return ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
+  if (targetTable === CFG.REGISTRY_SHEET) return ['pesel','name','surname','plant','apartment'];
   return [];
 }
 

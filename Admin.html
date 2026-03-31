@@ -236,6 +236,24 @@
   };
 
 
+
+  document.getElementById('refreshStatsBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        const body = document.getElementById('statsBody');
+        body.innerHTML = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.plant}</td><td>${r.completed}</td><td>${r.total}</td>`;
+          body.appendChild(tr);
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
+      .getAdminStats(adminToken);
+  };
+
   document.getElementById('generateTestDbBtn').onclick = () => {
     if (!requireAdmin()) return;
 
