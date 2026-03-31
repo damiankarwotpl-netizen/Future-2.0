@@ -171,9 +171,11 @@
       });
   };
 
-  document.getElementById('saveFormBtn').onclick = async () => {
-    if (!sessionToken) return setStatus('formStatus','Najpierw zaloguj się.','err');
+  let autoSaveTimer = null;
+  let lastUploadedPdfName = '';
+  let lastUploadedDlName = '';
 
+  async function buildPayload(includeFiles = false) {
     const payload = {
       token: sessionToken,
       name: document.getElementById('f_name').value.trim(),
@@ -200,33 +202,64 @@
       notes: document.getElementById('f_notes').value.trim()
     };
 
-    const attachment = document.getElementById('f_attachment').files[0];
-    if (attachment) {
-      try {
+    if (includeFiles) {
+      const attachment = document.getElementById('f_attachment').files[0];
+      if (attachment && attachment.name !== lastUploadedPdfName) {
         payload.attachmentBase64 = await readFileAsBase64(attachment);
         payload.attachmentName = attachment.name;
-      } catch (err) {
-        return setStatus('formStatus','Błąd odczytu PDF: '+err.message,'err');
       }
-    }
 
-
-    const drivingPhoto = document.getElementById('f_drivingLicensePhoto').files[0];
-    if (payload.intlDrivingLicense === 'tak' && drivingPhoto) {
-      try {
+      const drivingPhoto = document.getElementById('f_drivingLicensePhoto').files[0];
+      if (payload.intlDrivingLicense === 'tak' && drivingPhoto && drivingPhoto.name !== lastUploadedDlName) {
         payload.drivingLicensePhotoBase64 = await readFileAsBase64(drivingPhoto);
         payload.drivingLicensePhotoName = drivingPhoto.name;
         payload.drivingLicensePhotoMimeType = drivingPhoto.type || 'image/jpeg';
-      } catch (err) {
-        return setStatus('formStatus','Błąd odczytu zdjęcia prawa jazdy: '+err.message,'err');
       }
     }
 
-    google.script.run
-      .withSuccessHandler(res=>setStatus('formStatus',res.message || 'Zapisano.','ok'))
-      .withFailureHandler(err=>setStatus('formStatus','Błąd zapisu: '+err.message,'err'))
-      .saveEmployeeForm(payload);
+    return payload;
+  }
+
+  async function saveForm(autoMode = false, includeFiles = false) {
+    if (!sessionToken) return;
+
+    try {
+      const payload = await buildPayload(includeFiles);
+      google.script.run
+        .withSuccessHandler(res => {
+          if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
+          if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
+          setStatus('formStatus', autoMode ? 'Autozapis OK' : (res.message || 'Zapisano.'), 'ok');
+        })
+        .withFailureHandler(err => setStatus('formStatus', 'Błąd zapisu: ' + err.message, 'err'))
+        .saveEmployeeForm(payload);
+    } catch (err) {
+      setStatus('formStatus', 'Błąd przygotowania danych: ' + err.message, 'err');
+    }
+  }
+
+  function scheduleAutoSave() {
+    if (!sessionToken) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
+  }
+
+  document.getElementById('saveFormBtn').onclick = async () => {
+    if (!sessionToken) return setStatus('formStatus','Najpierw zaloguj się.','err');
+    await saveForm(false, true);
   };
+
+  // Autozapis danych tekstowych/wyborów
+  document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
+    if (el.id === 'f_attachment' || el.id === 'f_drivingLicensePhoto') return;
+    el.addEventListener('input', scheduleAutoSave);
+    el.addEventListener('change', scheduleAutoSave);
+  });
+
+  // Autozapis plików od razu po wyborze
+  document.getElementById('f_attachment').addEventListener('change', () => saveForm(true, true));
+  document.getElementById('f_drivingLicensePhoto').addEventListener('change', () => saveForm(true, true));
+
 </script>
 </body>
 </html>
