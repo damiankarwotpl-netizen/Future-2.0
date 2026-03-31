@@ -44,7 +44,7 @@ function doGet(e) {
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 function include(filename) {
