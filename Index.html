@@ -73,10 +73,12 @@
     <h3 class="section-title">Formularz pracownika</h3>
     <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
     <div class="grid">
-      <div><label>Imię</label><input id="f_name" readonly></div>
-      <div><label>Nazwisko</label><input id="f_surname" readonly></div>
+      <div><label>Imię</label><input id="f_name"></div>
+      <div><label>Nazwisko</label><input id="f_surname"></div>
       <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="f_phoneNumber" placeholder="np. 600700800"></div></div>
       <div><label>Email</label><input id="f_email" type="email"></div>
+      <div><label>Zakład</label><select id="f_plant"><option>Krakow</option><option>Warszawa</option><option>Wroclaw</option><option>Poznan</option><option>Gdansk</option></select></div>
+      <div><label>Mieszkanie</label><select id="f_apartment"><option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option></select></div>
       <div><label>Numer konta bankowego</label><input id="f_bankAccount"></div>
       <div><label>Data urodzenia</label><input id="f_birthDate" type="date"></div>
       <div><label>Numer paszportu</label><input id="f_passportNumber"></div>
@@ -119,6 +121,8 @@
     document.getElementById('f_surname').value = employee.surname || '';
     document.getElementById('f_pesel').value = employee.pesel || '';
     document.getElementById('f_email').value = employee.email || '';
+    document.getElementById('f_plant').value = employee.plant || 'Krakow';
+    document.getElementById('f_apartment').value = employee.apartment || 'Mieszkanie 1';
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
     document.getElementById('f_bankAccount').value = employee.bankAccount || '';
@@ -172,10 +176,13 @@
 
     const payload = {
       token: sessionToken,
+      name: document.getElementById('f_name').value.trim(),
+      surname: document.getElementById('f_surname').value.trim(),
+      plant: document.getElementById('f_plant').value,
       email: document.getElementById('f_email').value.trim(),
       phonePrefix: document.getElementById('f_phonePrefix').value,
       phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
-      apartment: '',
+      apartment: document.getElementById('f_apartment').value,
       hireDate: '',
       bankAccount: document.getElementById('f_bankAccount').value.trim(),
       birthDate: document.getElementById('f_birthDate').value,

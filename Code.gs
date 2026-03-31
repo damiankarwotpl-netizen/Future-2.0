@@ -177,7 +177,10 @@ function saveEmployeeForm(payload) {
   if (!sessRaw) throw new Error('Sesja wygasła.');
   const sess = JSON.parse(sessRaw);
 
-  const name = sess.name, surname = sess.surname, pesel = sess.pesel, plant = sess.plant;
+  const name = safe_(payload.name) || sess.name;
+  const surname = safe_(payload.surname) || sess.surname;
+  const pesel = sess.pesel;
+  const plant = safe_(payload.plant) || sess.plant;
   const phonePrefix = safe_(payload.phonePrefix || '+48');
   if (!['+48', '+57'].includes(phonePrefix)) throw new Error('Kierunkowy: +48 albo +57');
 
