@@ -36,11 +36,10 @@ const HEADER_SYNONYMS = {
 function doGet(e) {
   const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
   const view = page === 'admin' ? 'Admin' : 'Index';
-  const baseUrl = ScriptApp.getService().getUrl();
 
   const tpl = HtmlService.createTemplateFromFile(view);
-  tpl.homeUrl = baseUrl;
-  tpl.adminUrl = `${baseUrl}?page=admin`;
+  tpl.homeUrl = ScriptApp.getService().getUrl();
+  tpl.adminUrl = `${tpl.homeUrl}?page=admin`;
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
