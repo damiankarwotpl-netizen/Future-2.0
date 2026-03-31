@@ -3,21 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <base target="_top">
+  <base target="_self">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Panel administratora</title>
   <script>
-    (function forceChromeOnAndroid(){
-      const ua = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(ua);
-      const isChrome = /Chrome/i.test(ua);
-      const alreadyIntent = location.href.startsWith('intent://');
-      if (isAndroid && !isChrome && !alreadyIntent) {
-        const target = location.href.replace(/^https:\/\//, '');
-        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
-      }
+    // Stabilizacja URL Web App:
+    // - nie używamy intent://,
+    // - nie polegamy na ScriptApp.getService().getUrl() po stronie klienta,
+    // - czyścimy zbędne parametry wrapperów (np. Drive), zachowując ten sam /exec.
+    (function normalizeWebAppUrl() {
+      try {
+        const current = new URL(window.location.href);
+        const normalized = new URL(window.location.href);
+        normalized.search = '';
+        const expectedPage = '<?= pageName ?>';
+        if (expectedPage === 'admin') normalized.searchParams.set('page', 'admin');
+
+        const samePath = current.origin === normalized.origin && current.pathname === normalized.pathname;
+        const sameQuery = current.search === normalized.search;
+        const hasWrapperParams = ['usp', 'resourcekey', 'id', 'euid', 'pli', 'authuser'].some(p => current.searchParams.has(p));
+
+        if (samePath && (!sameQuery || hasWrapperParams)) {
+          window.location.replace(normalized.toString());
+        }
+      } catch (_) {}
     })();
   </script>
   <style>
@@ -96,7 +107,7 @@
     </div>
     <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_top" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
