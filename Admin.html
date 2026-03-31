@@ -52,6 +52,7 @@
 
 <script>
   let adminToken = null;
+  let currentEmployeeKey = null;
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
   function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
 
@@ -139,12 +140,13 @@
     const raw = document.getElementById('employeeSelect').value;
     if (!raw) return;
     const key = JSON.parse(raw);
+    currentEmployeeKey = key;
 
     google.script.run
       .withSuccessHandler(emp => {
         Object.keys(emp).forEach(k => {
           const el = document.getElementById(`edit_${k}`);
-          if (el) el.value = emp[k] || '';
+          if (el) { el.value = emp[k] || ''; el.defaultValue = emp[k] || ''; }
         });
       })
       .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
@@ -162,6 +164,10 @@
       const el = document.getElementById(`edit_${k}`);
       payload[k] = el ? el.value : '';
     });
+    payload.oldPesel = currentEmployeeKey ? currentEmployeeKey.pesel : '';
+    payload.oldPlant = currentEmployeeKey ? currentEmployeeKey.plant : '';
+    payload.oldName = document.getElementById('edit_name').defaultValue || '';
+    payload.oldSurname = document.getElementById('edit_surname').defaultValue || '';
 
     google.script.run
       .withSuccessHandler(() => setStatus('importStatus', 'Zapisano zmiany pracownika.', 'ok'))

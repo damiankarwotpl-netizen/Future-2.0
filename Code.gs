@@ -395,6 +395,19 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
   const name = safe_(payload.name), surname = safe_(payload.surname), pesel = safe_(payload.pesel), plant = safe_(payload.plant);
   if (!name || !surname || !pesel || !plant) throw new Error('Wymagane: imię, nazwisko, PESEL, zakład.');
 
+  const oldPesel = safe_(payload.oldPesel) || pesel;
+  const oldPlant = safe_(payload.oldPlant) || plant;
+  const oldName = safe_(payload.oldName) || name;
+  const oldSurname = safe_(payload.oldSurname) || surname;
+
+  const keyChanged = oldPesel !== pesel || oldPlant.toLowerCase() !== plant.toLowerCase() || oldName !== name || oldSurname !== surname;
+  if (keyChanged) {
+    deleteByKey_(getSheet_(CFG.CONTACTS_SHEET), ['name','surname','pesel','plant'], { name:oldName, surname:oldSurname, pesel:oldPesel, plant:oldPlant });
+    deleteByKey_(getSheet_(CFG.CLOTHES_SHEET), ['name','surname','plant'], { name:oldName, surname:oldSurname, plant:oldPlant });
+    deleteByKey_(getSheet_(CFG.SUBMISSIONS_SHEET), ['name','surname','pesel','plant'], { name:oldName, surname:oldSurname, pesel:oldPesel, plant:oldPlant });
+    moveEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel, plant, name, surname, pesel);
+  }
+
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
     ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
     ['name','surname','pesel','plant'],
@@ -840,6 +853,39 @@ function getClothesData_(name, surname, plant){
     }
   }
   return {shirt:'',hoodie:'',pants:'',jacket:'',shoes:''};
+}
+function deleteByKey_(sheet, keyFields, obj){
+  const vals = sheet.getDataRange().getValues();
+  if (vals.length < 2) return;
+  const h = headerMap_(vals[0]);
+  const target = keyFields.map(k=>safe_(obj[k]).toLowerCase()).join('|');
+  for (let i = vals.length - 1; i >= 1; i--) {
+    const key = keyFields.map(k=>safe_(vals[i][h[k]]).toLowerCase()).join('|');
+    if (key === target) sheet.deleteRow(i + 1);
+  }
+}
+function findEmployeeFolder_(plant, name, surname, pesel){
+  const root = getRootFolder_();
+  const pit = root.getFoldersByName(sanitizeFilePart_(plant));
+  if (!pit.hasNext()) return null;
+  const plantFolder = pit.next();
+  const folderName = `${sanitizeFilePart_(name)}_${sanitizeFilePart_(surname)}_${sanitizeFilePart_(pesel)}`;
+  const fit = plantFolder.getFoldersByName(folderName);
+  return fit.hasNext() ? fit.next() : null;
+}
+function moveEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel, newPlant, newName, newSurname, newPesel){
+  const oldFolder = findEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel);
+  if (!oldFolder) return;
+  const newFolder = getEmployeeFolder_(newPlant, newName, newSurname, newPesel);
+
+  const files = oldFolder.getFiles();
+  while (files.hasNext()) {
+    const f = files.next();
+    newFolder.addFile(f);
+    oldFolder.removeFile(f);
+  }
+
+  oldFolder.setTrashed(true);
 }
 function upsertByKey_(sheet, headers, keyFields, obj){
   if (sheet.getLastRow() === 0) sheet.appendRow(headers);
