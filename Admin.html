@@ -3,21 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <base target="_top">
+  <base target="_self">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Panel administratora</title>
   <script>
-    (function forceChromeOnAndroid(){
-      const ua = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(ua);
-      const isChrome = /Chrome/i.test(ua);
-      const alreadyIntent = location.href.startsWith('intent://');
-      if (isAndroid && !isChrome && !alreadyIntent) {
-        const target = location.href.replace(/^https:\/\//, '');
-        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
-      }
+    // Stabilizacja URL Web App na Androidzie:
+    // - nie używamy intent:// (powodowało błędne adresy),
+    // - jeśli strona została otwarta przez wrapper/parametry Drive, wracamy do canonical URL.
+    (function normalizeWebAppUrl() {
+      const canonical = '<?= canonicalUrl ?>';
+      if (!canonical) return;
+      try {
+        const cur = new URL(window.location.href);
+        const can = new URL(canonical);
+        const hasDriveWrapperParams = ['usp', 'resourcekey', 'id', 'euid'].some(p => cur.searchParams.has(p));
+        const wrongHost = cur.host !== can.host;
+        const wrongPath = cur.pathname !== can.pathname;
+        const wrongPage = (cur.searchParams.get('page') || '') !== (can.searchParams.get('page') || '');
+
+        if (wrongHost || wrongPath || wrongPage || hasDriveWrapperParams) {
+          window.location.replace(canonical);
+        }
+      } catch (_) {}
     })();
   </script>
   <style>
@@ -96,7 +105,7 @@
     </div>
     <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_top" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
