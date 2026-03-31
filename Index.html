@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base target="_top">
   <title>Panel pracownika</title>
   <style>
     :root{
@@ -87,7 +88,7 @@
     </div>
     <div class="row"><button class="btn" id="loginBtn" data-i18n="login_btn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
-    <a class="admin-link" href="<?= adminUrl ?>" data-i18n="go_admin">Przejdź do panelu administratora</a>
+    <a class="admin-link" href="<?= adminUrl ?>" target="_top" rel="noopener" data-i18n="go_admin">Przejdź do panelu administratora</a>
   </section>
 
   <section class="card hidden" id="employeeFormWrap">
@@ -357,6 +358,11 @@
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');
   applyI18n();
+  if (!(window.google && google.script && google.script.run)) {
+    setStatus('loginStatus', getLang()==='es'
+      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+  }
 
   // Autozapis danych tekstowych/wyborów
   document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {

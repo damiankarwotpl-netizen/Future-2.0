@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base target="_top">
   <title>Panel administratora</title>
   <style>
     :root{--bg:#eef2ff;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary-2:#3730a3;--border:#dbe4ff;--ok:#047857;--err:#b91c1c;--shadow:0 14px 36px rgba(30,41,90,.12)}
@@ -80,7 +81,7 @@
     </div>
     <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_top" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
@@ -454,6 +455,11 @@
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');
   applyI18n();
+  if (!(window.google && google.script && google.script.run)) {
+    setStatus('adminAuthStatus', getLang()==='es'
+      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+  }
   setEditIntlDrivingVisibility();
   document.getElementById('statsBody').addEventListener('click', e => {
     const btn = e.target.closest('.plant-link');
