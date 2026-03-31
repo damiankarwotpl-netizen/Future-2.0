@@ -1,33 +1,82 @@
 <section class="card">
   <h3 class="section-title">Panel admin – listy do formularza</h3>
-  <p class="section-sub">Wklej listy i zapisz. Dane trafią automatycznie do osobnych zakładek arkusza.</p>
+  <p class="section-sub">Dodawaj/usuwaj listy PESEL, zakładów i mieszkań oraz edytuj zapisanych pracowników.</p>
 
   <div class="grid">
     <div>
-      <label>PESEL (wiele na raz, każdy w nowej linii)</label>
+      <label>Dodaj PESEL (1 linia = 1 PESEL)</label>
       <textarea id="peselBulk" placeholder="90010112345\n92020254321"></textarea>
     </div>
     <div>
-      <label>Zakład (wiele na raz, każdy w nowej linii)</label>
+      <label>Dodaj zakład (1 linia = 1 zakład)</label>
       <textarea id="plantBulk" placeholder="Krakow\nWarszawa"></textarea>
     </div>
     <div class="full">
-      <label>Mieszkanie / adres (wiele na raz, każdy w nowej linii)</label>
+      <label>Dodaj mieszkania/adresy (1 linia = 1 mieszkanie)</label>
       <textarea id="apartmentBulk" placeholder="ul. Testowa 1/2\nul. Próbna 5/8"></textarea>
     </div>
   </div>
 
   <div class="row">
     <button class="btn" id="saveListsBtn">Zapisz listy</button>
-    <button class="btn secondary" id="generateTestDbBtn">Generuj bazę testową</button>
-    <button class="btn secondary" id="refreshStatsBtn">Odśwież statystyki</button>
   </div>
+
+  <div class="divider"></div>
+
+  <div class="grid">
+    <div><label>Usuń PESEL</label><textarea id="peselRemoveBulk" placeholder="90010112345"></textarea></div>
+    <div><label>Usuń zakład</label><textarea id="plantRemoveBulk" placeholder="Krakow"></textarea></div>
+    <div class="full"><label>Usuń mieszkanie/adres</label><textarea id="apartmentRemoveBulk" placeholder="ul. Testowa 1/2"></textarea></div>
+  </div>
+
+  <div class="row"><button class="btn secondary" id="removeListsBtn">Usuń z list</button></div>
 
   <div id="importStatus" class="status"></div>
 
   <div class="divider"></div>
+
+  <div>
+    <h4 class="section-title">Edytuj pracownika (wypełnił formularz)</h4>
+    <div class="row">
+      <button class="btn secondary" id="refreshEmployeesBtn">Odśwież listę pracowników</button>
+      <select id="employeeSelect"></select>
+      <button class="btn secondary" id="loadEmployeeBtn">Wczytaj do edycji</button>
+    </div>
+
+    <div class="grid" style="margin-top:10px">
+      <div><label>Imię</label><input id="edit_name"></div>
+      <div><label>Nazwisko</label><input id="edit_surname"></div>
+      <div><label>PESEL</label><input id="edit_pesel"></div>
+      <div><label>Zakład</label><input id="edit_plant"></div>
+      <div><label>Mieszkanie</label><input id="edit_apartment"></div>
+      <div><label>Email</label><input id="edit_email"></div>
+      <div><label>Telefon</label><input id="edit_phone"></div>
+      <div><label>Konto bankowe</label><input id="edit_bankAccount"></div>
+      <div><label>Data urodzenia</label><input id="edit_birthDate" type="date"></div>
+      <div><label>Nr paszportu</label><input id="edit_passportNumber"></div>
+      <div><label>Ważność paszportu</label><input id="edit_passportExpiry" type="date"></div>
+      <div><label>Data przyjazdu</label><input id="edit_arrivalDate" type="date"></div>
+      <div><label>Pierwsza praca</label><input id="edit_firstWorkDate" type="date"></div>
+      <div><label>Prawo jazdy międzynarodowe</label><select id="edit_intlDrivingLicense"><option>nie</option><option>tak</option></select></div>
+      <div><label>Ważność prawa jazdy</label><input id="edit_intlDrivingLicenseExpiry" type="date"></div>
+      <div><label>Koszulka</label><input id="edit_shirt"></div>
+      <div><label>Bluza</label><input id="edit_hoodie"></div>
+      <div><label>Spodnie</label><input id="edit_pants"></div>
+      <div><label>Kurtka</label><input id="edit_jacket"></div>
+      <div><label>Buty</label><input id="edit_shoes"></div>
+      <div class="full"><label>Notatki</label><textarea id="edit_notes"></textarea></div>
+    </div>
+
+    <div class="row"><button class="btn" id="saveEmployeeBtn">Zapisz zmiany pracownika</button></div>
+  </div>
+
+  <div class="divider"></div>
   <div>
     <h4 class="section-title">Statystyki wypełnienia formularza</h4>
+    <div class="row">
+      <button class="btn secondary" id="refreshStatsBtn">Odśwież statystyki</button>
+      <button class="btn secondary" id="generateTestDbBtn">Generuj bazę testową</button>
+    </div>
     <table>
       <thead><tr><th>Zakład</th><th>Wypełnione</th><th>Wszystkie</th></tr></thead>
       <tbody id="statsBody"></tbody>

@@ -307,6 +307,101 @@ function adminSaveCoreLists(adminToken, payload) {
   return { ok:true, pesels:pesels.length, plants:plants.length, apartments:apartments.length };
 }
 
+
+function adminRemoveFromLists(adminToken, payload) {
+  assertAdmin_(adminToken);
+
+  const peselsToRemove = new Set(parseMultilineList_(payload && payload.pesels));
+  const plantsToRemove = new Set(parseMultilineList_(payload && payload.plants));
+  const apartmentsToRemove = new Set(parseMultilineList_(payload && payload.apartments));
+
+  removeFromSingleColumnSheet_(getSheet_(CFG.PESEL_LIST_SHEET), 'pesel', peselsToRemove);
+  removeFromSingleColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plantsToRemove);
+  removeFromSingleColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartmentsToRemove);
+
+  return { ok:true };
+}
+
+function adminListCompletedEmployees(adminToken) {
+  assertAdmin_(adminToken);
+
+  const vals = getSheet_(CFG.SUBMISSIONS_SHEET).getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+  const uniq = new Map();
+
+  for (let i = 1; i < vals.length; i++) {
+    const pesel = safe_(vals[i][h.pesel]);
+    const plant = safe_(vals[i][h.plant]);
+    const name = safe_(vals[i][h.name]);
+    const surname = safe_(vals[i][h.surname]);
+    if (!pesel || !plant) continue;
+    uniq.set(`${pesel}|${plant}`.toLowerCase(), { pesel, plant, name, surname });
+  }
+
+  return [...uniq.values()].sort((a,b)=>`${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'pl'));
+}
+
+function adminGetEmployeeForEdit(adminToken, pesel, plant) {
+  assertAdmin_(adminToken);
+
+  const p = safe_(pesel), pl = safe_(plant);
+  const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
+  const ch = headerMap_(cVals[0] || []);
+
+  let found = null;
+  for (let i = 1; i < cVals.length; i++) {
+    const cp = safe_(cVals[i][ch.pesel]);
+    const cpl = safe_(cVals[i][ch.plant] || cVals[i][ch.workplace]);
+    if (cp === p && cpl.toLowerCase() === pl.toLowerCase()) {
+      found = {
+        name: safe_(cVals[i][ch.name]), surname: safe_(cVals[i][ch.surname]), pesel: cp, plant: cpl,
+        email: safe_(cVals[i][ch.email]), phone: safe_(cVals[i][ch.phone]), apartment: safe_(cVals[i][ch.apartment]),
+        hireDate: safe_(cVals[i][ch.hireDate]), notes: safe_(cVals[i][ch.notes]),
+        bankAccount: safe_(cVals[i][ch.bankAccount]), birthDate: safe_(cVals[i][ch.birthDate]),
+        passportNumber: safe_(cVals[i][ch.passportNumber]), passportExpiry: safe_(cVals[i][ch.passportExpiry]),
+        arrivalDate: safe_(cVals[i][ch.arrivalDate]), firstWorkDate: safe_(cVals[i][ch.firstWorkDate]),
+        intlDrivingLicense: safe_(cVals[i][ch.intlDrivingLicense]), intlDrivingLicenseExpiry: safe_(cVals[i][ch.intlDrivingLicenseExpiry])
+      };
+      break;
+    }
+  }
+
+  if (!found) throw new Error('Nie znaleziono pracownika do edycji.');
+  return { ...found, ...getClothesData_(found.name, found.surname, found.plant) };
+}
+
+function adminSaveEmployeeByAdmin(adminToken, payload) {
+  assertAdmin_(adminToken);
+
+  const name = safe_(payload.name), surname = safe_(payload.surname), pesel = safe_(payload.pesel), plant = safe_(payload.plant);
+  if (!name || !surname || !pesel || !plant) throw new Error('Wymagane: imię, nazwisko, PESEL, zakład.');
+
+  upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
+    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
+    ['name','surname','pesel','plant'],
+    {
+      name, surname, pesel, plant,
+      email:safe_(payload.email), phone:safe_(payload.phone), workplace:plant, apartment:safe_(payload.apartment),
+      hireDate:safe_(payload.hireDate), clothesSize:'', shoesSize:safe_(payload.shoes), notes:safe_(payload.notes),
+      bankAccount:safe_(payload.bankAccount), birthDate:safe_(payload.birthDate), passportNumber:safe_(payload.passportNumber),
+      passportExpiry:safe_(payload.passportExpiry), arrivalDate:safe_(payload.arrivalDate), firstWorkDate:safe_(payload.firstWorkDate),
+      intlDrivingLicense:safe_(payload.intlDrivingLicense), intlDrivingLicenseExpiry:safe_(payload.intlDrivingLicenseExpiry)
+    }
+  );
+
+  upsertByKey_(getSheet_(CFG.CLOTHES_SHEET),
+    ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'],
+    ['name','surname','plant'],
+    {
+      name, surname, plant,
+      shirt:safe_(payload.shirt), hoodie:safe_(payload.hoodie), pants:safe_(payload.pants), jacket:safe_(payload.jacket), shoes:safe_(payload.shoes)
+    }
+  );
+
+  markSubmission_(name, surname, pesel, plant);
+  return { ok:true };
+}
+
 /* ======================== ADMIN STATS ======================== */
 
 function getAdminStats(adminToken) {
@@ -643,12 +738,20 @@ function upsertTextFile_(folder, fileName, content){
 function getOrCreateSheet_(ss, name){ return ss.getSheetByName(name) || ss.insertSheet(name); }
 function parseMultilineList_(txt){
   return [...new Set(String(txt || '')
-    .split(/\r?\n|,|;/)
+    .split(/\r?\n/)
     .map(s => safe_(s))
     .filter(Boolean))];
 }
 function writeUniqueColumnSheet_(sheet, headerName, values){
   writeSheetData_(sheet, [headerName], values.map(v => [v]));
+}
+function removeFromSingleColumnSheet_(sheet, headerName, removeSet){
+  const vals = sheet.getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+  const idx = h[headerName];
+  if (idx == null) return;
+  const kept = vals.slice(1).map(r => safe_(r[idx])).filter(v => v && !removeSet.has(v));
+  writeUniqueColumnSheet_(sheet, headerName, kept);
 }
 function writeSheetData_(sheet, header, rows){
   sheet.clearContents();

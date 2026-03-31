@@ -79,6 +79,73 @@
       });
   };
 
+
+  document.getElementById('removeListsBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(() => setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
+      .adminRemoveFromLists(adminToken, {
+        pesels: document.getElementById('peselRemoveBulk').value,
+        plants: document.getElementById('plantRemoveBulk').value,
+        apartments: document.getElementById('apartmentRemoveBulk').value
+      });
+  };
+
+  document.getElementById('refreshEmployeesBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        const sel = document.getElementById('employeeSelect');
+        sel.innerHTML = '';
+        rows.forEach(r => {
+          const o = document.createElement('option');
+          o.value = JSON.stringify({pesel:r.pesel, plant:r.plant});
+          o.textContent = `${r.surname} ${r.name} | ${r.pesel} | ${r.plant}`;
+          sel.appendChild(o);
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd pobierania pracowników: '+err.message,'err'))
+      .adminListCompletedEmployees(adminToken);
+  };
+
+  document.getElementById('loadEmployeeBtn').onclick = () => {
+    if (!requireAdmin()) return;
+    const raw = document.getElementById('employeeSelect').value;
+    if (!raw) return;
+    const key = JSON.parse(raw);
+
+    google.script.run
+      .withSuccessHandler(emp => {
+        Object.keys(emp).forEach(k => {
+          const el = document.getElementById(`edit_${k}`);
+          if (el) el.value = emp[k] || '';
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
+      .adminGetEmployeeForEdit(adminToken, key.pesel, key.plant);
+  };
+
+  document.getElementById('saveEmployeeBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    const payload = {};
+    [
+      'name','surname','pesel','plant','apartment','email','phone','bankAccount','birthDate','passportNumber','passportExpiry',
+      'arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','shirt','hoodie','pants','jacket','shoes','notes'
+    ].forEach(k => {
+      const el = document.getElementById(`edit_${k}`);
+      payload[k] = el ? el.value : '';
+    });
+
+    google.script.run
+      .withSuccessHandler(() => setStatus('importStatus', 'Zapisano zmiany pracownika.', 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu pracownika: '+err.message,'err'))
+      .adminSaveEmployeeByAdmin(adminToken, payload);
+  };
+
   document.getElementById('refreshStatsBtn').onclick = () => {
     if (!requireAdmin()) return;
 
