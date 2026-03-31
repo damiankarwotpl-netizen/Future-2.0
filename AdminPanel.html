@@ -4,7 +4,9 @@
 
   <div class="grid">
     <div>
-      <label>Dodaj PESEL (1 linia = 1 PESEL)</label>
+      <label>Zakład dla listy PESEL (najpierw wybierz)</label>
+      <select id="peselAssignPlant"></select>
+      <label style="margin-top:8px">Dodaj PESEL (1 linia = 1 PESEL)</label>
       <textarea id="peselBulk" placeholder="90010112345\n92020254321"></textarea>
     </div>
     <div>
@@ -19,6 +21,7 @@
 
   <div class="row">
     <button class="btn" id="saveListsBtn">Zapisz listy</button>
+    <button class="btn secondary" id="refreshListsBtn">Odśwież listy</button>
   </div>
 
   <div class="divider"></div>

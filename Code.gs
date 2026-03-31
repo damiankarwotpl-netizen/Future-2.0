@@ -68,7 +68,7 @@ function initAll() {
   ensureHeader_(clothes, ['name','surname','plant','shirt','hoodie','pants','jacket','shoes']);
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
   ensureHeader_(registry, ['pesel','name','surname','plant','apartment']);
-  ensureHeader_(peselList, ['pesel']);
+  ensureHeader_(peselList, ['pesel','plant']);
   ensureHeader_(plantList, ['plant']);
   ensureHeader_(apartmentList, ['apartment']);
 
@@ -140,12 +140,9 @@ function loginByIdentity(identity) {
 
   const peselVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
   const ph = headerMap_(peselVals[0] || []);
-  const peselExists = peselVals.slice(1).some(r => safe_(r[ph.pesel]) === pesel);
-  if (!peselExists) throw new Error('PESEL nie jest na liście logowania.');
-
-  const plantVals = getSheet_(CFG.PLANT_LIST_SHEET).getDataRange().getValues();
-  const plh = headerMap_(plantVals[0] || []);
-  const plantOptions = [...new Set(plantVals.slice(1).map(r => safe_(r[plh.plant])).filter(Boolean))];
+  const peselRows = peselVals.slice(1).filter(r => safe_(r[ph.pesel]) === pesel);
+  if (!peselRows.length) throw new Error('PESEL nie jest na liście logowania.');
+  const plantOptions = [...new Set(peselRows.map(r => safe_(r[ph.plant])).filter(Boolean))];
 
   const apartmentVals = getSheet_(CFG.APARTMENT_LIST_SHEET).getDataRange().getValues();
   const ah = headerMap_(apartmentVals[0] || []);
@@ -296,17 +293,24 @@ function assertAdmin_(token) {
 function adminSaveCoreLists(adminToken, payload) {
   assertAdmin_(adminToken);
 
-  const pesels = parseMultilineList_(payload && payload.pesels).filter(v => /^\d{11}$/.test(v));
   const plants = parseMultilineList_(payload && payload.plants);
   const apartments = parseMultilineList_(payload && payload.apartments);
+  const selectedPlant = safe_(payload && payload.selectedPlant);
+  const pesels = parseMultilineList_(payload && payload.pesels).filter(v => /^\d{11}$/.test(v));
 
-  writeUniqueColumnSheet_(getSheet_(CFG.PESEL_LIST_SHEET), 'pesel', pesels);
-  writeUniqueColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plants);
-  writeUniqueColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartments);
+  // Listy zakładów i mieszkań działają jako słowniki (nadpisanie aktualnym zbiorem wejściowym)
+  if (plants.length) writeUniqueColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plants);
+  if (apartments.length) writeUniqueColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartments);
 
-  return { ok:true, pesels:pesels.length, plants:plants.length, apartments:apartments.length };
+  // PESEL dopisywany do wybranego zakładu (wielokrotnego użytku, bez duplikatów pary pesel+plant)
+  let savedPesels = 0;
+  if (pesels.length) {
+    if (!selectedPlant) throw new Error('Najpierw wybierz zakład dla listy PESEL.');
+    savedPesels = upsertPeselsForPlant_(pesels, selectedPlant);
+  }
+
+  return { ok:true, pesels:savedPesels, plants:plants.length, apartments:apartments.length };
 }
-
 
 function adminRemoveFromLists(adminToken, payload) {
   assertAdmin_(adminToken);
@@ -315,11 +319,26 @@ function adminRemoveFromLists(adminToken, payload) {
   const plantsToRemove = new Set(parseMultilineList_(payload && payload.plants));
   const apartmentsToRemove = new Set(parseMultilineList_(payload && payload.apartments));
 
-  removeFromSingleColumnSheet_(getSheet_(CFG.PESEL_LIST_SHEET), 'pesel', peselsToRemove);
+  removePeselsFromSheet_(getSheet_(CFG.PESEL_LIST_SHEET), peselsToRemove);
   removeFromSingleColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plantsToRemove);
   removeFromSingleColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartmentsToRemove);
 
   return { ok:true };
+}
+
+
+function adminGetCoreLists(adminToken) {
+  assertAdmin_(adminToken);
+
+  const plantVals = getSheet_(CFG.PLANT_LIST_SHEET).getDataRange().getValues();
+  const plh = headerMap_(plantVals[0] || []);
+  const plants = [...new Set(plantVals.slice(1).map(r => safe_(r[plh.plant])).filter(Boolean))];
+
+  const apartmentVals = getSheet_(CFG.APARTMENT_LIST_SHEET).getDataRange().getValues();
+  const ah = headerMap_(apartmentVals[0] || []);
+  const apartments = [...new Set(apartmentVals.slice(1).map(r => safe_(r[ah.apartment])).filter(Boolean))];
+
+  return { plants, apartments };
 }
 
 function adminListCompletedEmployees(adminToken) {
@@ -375,6 +394,19 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
 
   const name = safe_(payload.name), surname = safe_(payload.surname), pesel = safe_(payload.pesel), plant = safe_(payload.plant);
   if (!name || !surname || !pesel || !plant) throw new Error('Wymagane: imię, nazwisko, PESEL, zakład.');
+
+  const oldPesel = safe_(payload.oldPesel) || pesel;
+  const oldPlant = safe_(payload.oldPlant) || plant;
+  const oldName = safe_(payload.oldName) || name;
+  const oldSurname = safe_(payload.oldSurname) || surname;
+
+  const keyChanged = oldPesel !== pesel || oldPlant.toLowerCase() !== plant.toLowerCase() || oldName !== name || oldSurname !== surname;
+  if (keyChanged) {
+    deleteByKey_(getSheet_(CFG.CONTACTS_SHEET), ['name','surname','pesel','plant'], { name:oldName, surname:oldSurname, pesel:oldPesel, plant:oldPlant });
+    deleteByKey_(getSheet_(CFG.CLOTHES_SHEET), ['name','surname','plant'], { name:oldName, surname:oldSurname, plant:oldPlant });
+    deleteByKey_(getSheet_(CFG.SUBMISSIONS_SHEET), ['name','surname','pesel','plant'], { name:oldName, surname:oldSurname, pesel:oldPesel, plant:oldPlant });
+    moveEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel, plant, name, surname, pesel);
+  }
 
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
     ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
@@ -753,6 +785,35 @@ function removeFromSingleColumnSheet_(sheet, headerName, removeSet){
   const kept = vals.slice(1).map(r => safe_(r[idx])).filter(v => v && !removeSet.has(v));
   writeUniqueColumnSheet_(sheet, headerName, kept);
 }
+function upsertPeselsForPlant_(pesels, plant){
+  const sheet = getSheet_(CFG.PESEL_LIST_SHEET);
+  const vals = sheet.getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+
+  const existing = new Set(vals.slice(1).map(r => `${safe_(r[h.pesel])}|${safe_(r[h.plant])}`.toLowerCase()));
+  const out = vals.slice(1).map(r => [safe_(r[h.pesel]), safe_(r[h.plant])]);
+
+  let added = 0;
+  pesels.forEach(p => {
+    const key = `${safe_(p)}|${safe_(plant)}`.toLowerCase();
+    if (!existing.has(key)) {
+      existing.add(key);
+      out.push([safe_(p), safe_(plant)]);
+      added++;
+    }
+  });
+
+  writeSheetData_(sheet, ['pesel','plant'], out);
+  return added;
+}
+function removePeselsFromSheet_(sheet, removeSet){
+  const vals = sheet.getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+  const kept = vals.slice(1)
+    .filter(r => !removeSet.has(safe_(r[h.pesel])))
+    .map(r => [safe_(r[h.pesel]), safe_(r[h.plant])]);
+  writeSheetData_(sheet, ['pesel','plant'], kept);
+}
 function writeSheetData_(sheet, header, rows){
   sheet.clearContents();
   sheet.getRange(1,1,1,header.length).setValues([header]);
@@ -792,6 +853,39 @@ function getClothesData_(name, surname, plant){
     }
   }
   return {shirt:'',hoodie:'',pants:'',jacket:'',shoes:''};
+}
+function deleteByKey_(sheet, keyFields, obj){
+  const vals = sheet.getDataRange().getValues();
+  if (vals.length < 2) return;
+  const h = headerMap_(vals[0]);
+  const target = keyFields.map(k=>safe_(obj[k]).toLowerCase()).join('|');
+  for (let i = vals.length - 1; i >= 1; i--) {
+    const key = keyFields.map(k=>safe_(vals[i][h[k]]).toLowerCase()).join('|');
+    if (key === target) sheet.deleteRow(i + 1);
+  }
+}
+function findEmployeeFolder_(plant, name, surname, pesel){
+  const root = getRootFolder_();
+  const pit = root.getFoldersByName(sanitizeFilePart_(plant));
+  if (!pit.hasNext()) return null;
+  const plantFolder = pit.next();
+  const folderName = `${sanitizeFilePart_(name)}_${sanitizeFilePart_(surname)}_${sanitizeFilePart_(pesel)}`;
+  const fit = plantFolder.getFoldersByName(folderName);
+  return fit.hasNext() ? fit.next() : null;
+}
+function moveEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel, newPlant, newName, newSurname, newPesel){
+  const oldFolder = findEmployeeFolder_(oldPlant, oldName, oldSurname, oldPesel);
+  if (!oldFolder) return;
+  const newFolder = getEmployeeFolder_(newPlant, newName, newSurname, newPesel);
+
+  const files = oldFolder.getFiles();
+  while (files.hasNext()) {
+    const f = files.next();
+    newFolder.addFile(f);
+    oldFolder.removeFile(f);
+  }
+
+  oldFolder.setTrashed(true);
 }
 function upsertByKey_(sheet, headers, keyFields, obj){
   if (sheet.getLastRow() === 0) sheet.appendRow(headers);
