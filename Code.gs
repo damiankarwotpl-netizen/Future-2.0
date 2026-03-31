@@ -38,8 +38,8 @@ function doGet(e) {
   const view = page === 'admin' ? 'Admin' : 'Index';
 
   const tpl = HtmlService.createTemplateFromFile(view);
-  tpl.homeUrl = '?';
-  tpl.adminUrl = '?page=admin';
+  tpl.homeUrl = baseUrl;
+  tpl.adminUrl = `${baseUrl}?page=admin`;
   tpl.pageName = page === 'admin' ? 'admin' : 'index';
 
   return tpl.evaluate()
