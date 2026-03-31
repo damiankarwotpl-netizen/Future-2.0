@@ -3,46 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <base target="_top">
   <title>Panel administratora</title>
   <style>
-    :root{--bg:#f3f6ff;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary-2:#4338ca;--border:#dbe4ff;--ok:#047857;--err:#b91c1c;--shadow:0 10px 28px rgba(44,62,120,.08)}
+    :root{--bg:#eef2ff;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary-2:#3730a3;--border:#dbe4ff;--ok:#047857;--err:#b91c1c;--shadow:0 14px 36px rgba(30,41,90,.12)}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
-    .container{max-width:1100px;margin:28px auto;padding:0 14px 28px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top right,#c7d2fe 0%,transparent 36%),radial-gradient(circle at top left,#e0e7ff 0%,transparent 44%),var(--bg);min-height:100vh}
+    .container{max-width:1140px;margin:30px auto;padding:0 16px 32px;position:relative}
+    .hero{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .hero h1{margin:0 0 6px;font-size:1.65rem}
+    .hero p{margin:0;color:var(--muted)}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease;position:relative;overflow:hidden}
+    .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#6366f1,#4338ca)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input,textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease}
+    input:hover,textarea:hover,select:hover{border-color:#94a3b8}
     textarea{min-height:120px}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
+    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.24)}
+    .btn:hover{filter:brightness(1.03)}
     .btn.secondary{background:#eef2ff;color:#3730a3;box-shadow:none}
     .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
     .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}.err{color:var(--err);background:#fef2f2;border-color:#fecaca}
     .hidden{display:none}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #e2e8f0;padding:8px;text-align:left}
+    tbody tr:nth-child(even){background:#fafbff}
+    tbody tr:hover{background:#eef2ff}
     th{background:#f8fafc}
     .divider{height:1px;background:#e2e8f0;margin:14px 0}
     .link{color:#4338ca;text-decoration:none;font-weight:600}
+    .live-badge{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-size:.82rem;font-weight:700;background:#ecfeff;color:#155e75;border:1px solid #a5f3fc}
+    .stats-summary{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+    .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px}
+    .kpi .label{font-size:.8rem;color:#64748b}
+    .kpi .value{font-size:1.3rem;font-weight:800;color:#1e1b4b}
+    .stats-layout{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
+    .stats-chart-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px}
+    .card-soft{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    #missingPeselList{margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto}
+    .stats-table{margin-top:10px}
+    .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
+    .plant-link:hover{text-decoration:underline}
+    .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
+    .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
+    .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
+    .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
+    @media(max-width:900px){.stats-layout{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
+<div class="lang-switch">
+  <button class="flag-btn" id="langPL" title="Polski">🇵🇱</button>
+  <button class="flag-btn" id="langES" title="Español">🇪🇸</button>
+</div>
 <div class="container">
-  <section class="card">
-    <h3 class="section-title">Logowanie administratora</h3>
-    <p class="section-sub">Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.</p>
-    <div class="grid">
-      <div><label>Login</label><input id="adminLogin"></div>
-      <div><label>Hasło</label><input id="adminPassword" type="password"></div>
+  <header class="hero">
+    <div>
+      <h1 data-i18n="admin_title">Panel administratora</h1>
+      <p data-i18n="admin_sub">Zarządzaj listami, pracownikami i statystykami w jednym miejscu.</p>
     </div>
-    <div class="row"><button class="btn" id="adminAuthBtn">Zaloguj do panelu admin</button></div>
+    <div class="hero-badge" data-i18n="admin_mode">Tryb administracyjny • LIVE</div>
+  </header>
+  <section class="card">
+    <h3 class="section-title" data-i18n="admin_login_title">Logowanie administratora</h3>
+    <p class="section-sub" data-i18n="admin_login_sub">Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.</p>
+    <div class="grid">
+      <div><label data-i18n="login">Login</label><input id="adminLogin"></div>
+      <div><label data-i18n="password">Hasło</label><input id="adminPassword" type="password"></div>
+    </div>
+    <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_top" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
@@ -53,8 +92,95 @@
 <script>
   let adminToken = null;
   let currentEmployeeKey = null;
+  let statsPollHandle = null;
+  const I18N = {
+    pl: {
+      admin_title:'Panel administratora', admin_sub:'Zarządzaj listami, pracownikami i statystykami w jednym miejscu.', admin_mode:'Tryb administracyjny • LIVE',
+      admin_login_title:'Logowanie administratora', admin_login_sub:'Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.',
+      login:'Login', password:'Hasło', admin_login_btn:'Zaloguj do panelu admin', back_emp:'← Wróć do panelu pracownika',
+      admin_auth_ok:'Autoryzacja poprawna.', auth_first:'Najpierw zaloguj się jako administrator.', login_err:'Błąd logowania: ',
+      list_refresh_err:'Błąd odświeżania list: ', stats_err:'Błąd statystyk: ', missing_err:'Błąd pobierania brakujących PESEL: ',
+      save_ok:'Zapisano zmiany pracownika.', save_err:'Błąd zapisu pracownika: ',
+      panel_lists_title:'Panel admin – listy do formularza', panel_lists_sub:'Dodawaj/usuwaj listy PESEL, zakładów i mieszkań oraz edytuj zapisanych pracowników.',
+      plant_for_pesel:'Zakład dla listy PESEL (najpierw wybierz)', add_pesel:'Dodaj PESEL (1 linia = 1 PESEL)', add_plant:'Dodaj zakład (1 linia = 1 zakład)',
+      add_apartment:'Dodaj mieszkania/adresy (1 linia = 1 mieszkanie)', save_lists:'Zapisz listy', refresh_lists:'Odśwież listy',
+      remove_pesel:'Usuń PESEL (wybór pracownika)', remove_plant:'Usuń zakład', remove_apartment:'Usuń mieszkanie/adres', remove_from_lists:'Usuń z list',
+      edit_emp_title:'Edytuj pracownika (wypełnił formularz)', refresh_emp:'Odśwież listę pracowników', load_edit:'Wczytaj do edycji',
+      save_emp_changes:'Zapisz zmiany pracownika', stats_title:'Statystyki wypełnienia formularza', refresh_stats:'Odśwież statystyki',
+      gen_test_db:'Generuj bazę testową', click_plant_missing:'Kliknij zakład, aby zobaczyć brakujące PESEL'
+      ,live_wait:'LIVE: oczekiwanie na dane…', live_updated:'LIVE: ostatnia aktualizacja ', missing_for:'Brakujące PESEL dla zakładu: ', all_done:'Wszyscy mają już wypełniony formularz.'
+    },
+    es: {
+      admin_title:'Panel de administrador', admin_sub:'Gestiona listas, trabajadores y estadísticas en un solo lugar.', admin_mode:'Modo administrador • LIVE',
+      admin_login_title:'Inicio de sesión de administrador', admin_login_sub:'Inicia sesión para gestionar listas PESEL / Planta / Vivienda.',
+      login:'Usuario', password:'Contraseña', admin_login_btn:'Entrar al panel admin', back_emp:'← Volver al panel del trabajador',
+      admin_auth_ok:'Autorización correcta.', auth_first:'Primero inicia sesión como administrador.', login_err:'Error de inicio de sesión: ',
+      list_refresh_err:'Error al refrescar listas: ', stats_err:'Error de estadísticas: ', missing_err:'Error al cargar PESEL faltantes: ',
+      save_ok:'Cambios del trabajador guardados.', save_err:'Error al guardar trabajador: ',
+      panel_lists_title:'Panel admin – listas del formulario', panel_lists_sub:'Agrega/elimina listas de PESEL, plantas y viviendas, y edita trabajadores guardados.',
+      plant_for_pesel:'Planta para la lista PESEL (primero selecciona)', add_pesel:'Agregar PESEL (1 línea = 1 PESEL)', add_plant:'Agregar planta (1 línea = 1 planta)',
+      add_apartment:'Agregar viviendas/direcciones (1 línea = 1 vivienda)', save_lists:'Guardar listas', refresh_lists:'Actualizar listas',
+      remove_pesel:'Eliminar PESEL (selección de trabajador)', remove_plant:'Eliminar planta', remove_apartment:'Eliminar vivienda/dirección', remove_from_lists:'Eliminar de listas',
+      edit_emp_title:'Editar trabajador (formulario completado)', refresh_emp:'Actualizar lista de trabajadores', load_edit:'Cargar para editar',
+      save_emp_changes:'Guardar cambios del trabajador', stats_title:'Estadísticas de formularios completados', refresh_stats:'Actualizar estadísticas',
+      gen_test_db:'Generar base de prueba', click_plant_missing:'Haz clic en una planta para ver PESEL faltantes'
+      ,live_wait:'LIVE: esperando datos…', live_updated:'LIVE: última actualización ', missing_for:'PESEL faltantes para la planta: ', all_done:'Todos ya completaron el formulario.'
+    }
+  };
+  const AUTO_ES = {
+    'Imię':'Nombre','Nazwisko':'Apellido','PESEL':'PESEL','Zakład':'Planta','Mieszkanie':'Vivienda','Email':'Correo electrónico',
+    'Telefon (z WhatsApp)':'Teléfono (con WhatsApp)','Konto bankowe':'Cuenta bancaria','Data urodzenia':'Fecha de nacimiento',
+    'Nr paszportu':'N.º de pasaporte','Ważność paszportu':'Vencimiento del pasaporte','Data przyjazdu':'Fecha de llegada',
+    'Pierwsza praca':'Primer trabajo','Prawo jazdy międzynarodowe':'Licencia internacional','Ważność prawa jazdy':'Vencimiento de licencia',
+    'Koszulka':'Camiseta','Bluza':'Sudadera','Spodnie':'Pantalón','Kurtka':'Chaqueta','Buty':'Zapatos','Notatki':'Notas'
+  };
+  function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
+  function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
+  function applyI18n(){
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('label').forEach(el => {
+      if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
+      el.textContent = getLang()==='es' ? (AUTO_ES[el.dataset.plText] || el.dataset.plText) : el.dataset.plText;
+    });
+    const liveBadge = document.getElementById('statsLiveBadge');
+    if (liveBadge && !liveBadge.dataset.updated) liveBadge.textContent = t('live_wait');
+    document.getElementById('langPL').classList.toggle('active', getLang()==='pl');
+    document.getElementById('langES').classList.toggle('active', getLang()==='es');
+    const search = document.getElementById('employeeSearch');
+    if (search) search.placeholder = getLang()==='es' ? 'Buscar por nombre, apellido, PESEL...' : 'Szukaj po imieniu, nazwisku, PESEL...';
+    const phone = document.getElementById('edit_phoneNumber');
+    if (phone) phone.placeholder = getLang()==='es' ? 'p.ej. 600700800' : 'np. 600700800';
+    const intl = document.getElementById('edit_intlDrivingLicense');
+    if (intl) {
+      intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
+      intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
+    }
+  }
+  function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
-  function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
+  function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus',t('auth_first'),'err'); return false; } return true; }
+  function setSelectOptions(selectId, values, selectedValue = '') {
+    const el = document.getElementById(selectId);
+    if (!el) return;
+    el.innerHTML = '';
+    values.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      el.appendChild(opt);
+    });
+    if (selectedValue && values.includes(selectedValue)) el.value = selectedValue;
+  }
+  function parsePhone(phoneRaw = '') {
+    const raw = String(phoneRaw || '').trim();
+    if (raw.startsWith('+57')) return { prefix:'+57', number:raw.replace('+57','').trim() };
+    if (raw.startsWith('+48')) return { prefix:'+48', number:raw.replace('+48','').trim() };
+    return { prefix:'+48', number:raw };
+  }
+  function setEditIntlDrivingVisibility() {
+    const show = document.getElementById('edit_intlDrivingLicense').value === 'tak';
+    document.getElementById('editIntlDrivingExpiryWrap').classList.toggle('hidden', !show);
+  }
 
   function refreshCoreLists(){
     if (!requireAdmin()) return;
@@ -88,8 +214,11 @@
           o.textContent = item.label;
           peselSel.appendChild(o);
         });
+
+        setSelectOptions('edit_plant', res.plants);
+        setSelectOptions('edit_apartment', res.apartments);
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd odświeżania list: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('list_refresh_err')+err.message,'err'))
       .adminGetCoreLists(adminToken);
   }
 
@@ -97,11 +226,13 @@
     google.script.run
       .withSuccessHandler(res => {
         adminToken = res.token;
-        setStatus('adminAuthStatus','Autoryzacja poprawna.','ok');
+        setStatus('adminAuthStatus',t('admin_auth_ok'),'ok');
         document.getElementById('adminApp').classList.remove('hidden');
         refreshCoreLists();
+        loadStats(true);
+        startStatsRealtime();
       })
-      .withFailureHandler(err=>setStatus('adminAuthStatus','Błąd logowania: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('adminAuthStatus',t('login_err')+err.message,'err'))
       .adminLogin(document.getElementById('adminLogin').value.trim(), document.getElementById('adminPassword').value);
   };
 
@@ -109,7 +240,10 @@
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(res => setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok'))
+      .withSuccessHandler(res => {
+        setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu list: '+err.message,'err'))
       .adminSaveCoreLists(adminToken, {
         pesels: document.getElementById('peselBulk').value,
@@ -128,7 +262,10 @@
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(() => setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok'))
+      .withSuccessHandler(() => {
+        setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
       .adminRemoveFromLists(adminToken, {
         peselKey: document.getElementById('peselRemoveSelect').value,
@@ -173,10 +310,16 @@
 
     google.script.run
       .withSuccessHandler(emp => {
+        const phone = parsePhone(emp.phone || '');
         Object.keys(emp).forEach(k => {
           const el = document.getElementById(`edit_${k}`);
           if (el) { el.value = emp[k] || ''; el.defaultValue = emp[k] || ''; }
         });
+        document.getElementById('edit_phonePrefix').value = phone.prefix;
+        document.getElementById('edit_phoneNumber').value = phone.number;
+        document.getElementById('edit_phonePrefix').defaultValue = phone.prefix;
+        document.getElementById('edit_phoneNumber').defaultValue = phone.number;
+        setEditIntlDrivingVisibility();
       })
       .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
       .adminGetEmployeeForEdit(adminToken, key.pesel, key.plant);
@@ -187,45 +330,151 @@
 
     const payload = {};
     [
-      'name','surname','pesel','plant','apartment','email','phone','bankAccount','birthDate','passportNumber','passportExpiry',
+      'name','surname','pesel','plant','apartment','email','bankAccount','birthDate','passportNumber','passportExpiry',
       'arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','shirt','hoodie','pants','jacket','shoes','notes'
     ].forEach(k => {
       const el = document.getElementById(`edit_${k}`);
       payload[k] = el ? el.value : '';
     });
+    payload.phone = `${document.getElementById('edit_phonePrefix').value} ${document.getElementById('edit_phoneNumber').value.trim()}`.trim();
     payload.oldPesel = currentEmployeeKey ? currentEmployeeKey.pesel : '';
     payload.oldPlant = currentEmployeeKey ? currentEmployeeKey.plant : '';
     payload.oldName = document.getElementById('edit_name').defaultValue || '';
     payload.oldSurname = document.getElementById('edit_surname').defaultValue || '';
 
     google.script.run
-      .withSuccessHandler(() => setStatus('importStatus', 'Zapisano zmiany pracownika.', 'ok'))
-      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu pracownika: '+err.message,'err'))
+      .withSuccessHandler(() => setStatus('importStatus', t('save_ok'), 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus',t('save_err')+err.message,'err'))
       .adminSaveEmployeeByAdmin(adminToken, payload);
   };
 
-  document.getElementById('refreshStatsBtn').onclick = () => {
-    if (!requireAdmin()) return;
+  function renderStats(rows) {
+    const body = document.getElementById('statsBody');
+    body.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><button class="plant-link" data-plant="${r.plant}">${r.plant}</button></td>
+        <td>${r.completed}</td>
+        <td>${r.remaining}</td>
+        <td>${r.total}</td>
+        <td><span class="progress-pill">${r.percent}%</span></td>
+      `;
+      body.appendChild(tr);
+    });
 
+    const completed = rows.reduce((a, r) => a + r.completed, 0);
+    const total = rows.reduce((a, r) => a + r.total, 0);
+    const remaining = rows.reduce((a, r) => a + r.remaining, 0);
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    document.getElementById('statsSummary').innerHTML = `
+      <div class="kpi"><div class="label">Wypełnione</div><div class="value">${completed}</div></div>
+      <div class="kpi"><div class="label">Brakuje</div><div class="value">${remaining}</div></div>
+      <div class="kpi"><div class="label">Wszystkie osoby</div><div class="value">${total}</div></div>
+      <div class="kpi"><div class="label">Łączny postęp</div><div class="value">${percent}%</div></div>
+    `;
+    drawStatsChart(rows);
+  }
+
+  function drawStatsChart(rows) {
+    const canvas = document.getElementById('statsChart');
+    if (!canvas) return;
+    const parentWidth = canvas.parentElement.clientWidth - 20;
+    canvas.width = Math.max(520, parentWidth);
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, w, h);
+    if (!rows.length) return;
+
+    const chartTop = 24;
+    const chartBottom = h - 54;
+    const chartHeight = chartBottom - chartTop;
+    const maxTotal = Math.max(...rows.map(r => r.total), 1);
+    const barSpace = (w - 40) / rows.length;
+    const barW = Math.max(28, barSpace * 0.42);
+
+    rows.forEach((r, i) => {
+      const x = 20 + i * barSpace + (barSpace - barW) / 2;
+      const doneH = (r.completed / maxTotal) * chartHeight;
+      const remainH = (r.remaining / maxTotal) * chartHeight;
+      const yDone = chartBottom - doneH;
+      const yRemain = yDone - remainH;
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(x, chartTop, barW, chartHeight);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(x, yDone, barW, doneH);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(x, yRemain, barW, remainH);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '12px Inter, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(r.plant, x + barW / 2, h - 32);
+      ctx.fillText(`${r.completed}/${r.total}`, x + barW / 2, h - 16);
+    });
+  }
+
+  function loadStats(silent = false) {
+    if (!requireAdmin()) return;
     google.script.run
       .withSuccessHandler(rows => {
-        const body = document.getElementById('statsBody');
-        body.innerHTML = '';
-        rows.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.plant}</td><td>${r.completed}</td><td>${r.total}</td>`;
-          body.appendChild(tr);
-        });
+        renderStats(rows);
+        const badge = document.getElementById('statsLiveBadge');
+        badge.dataset.updated = '1';
+        badge.textContent = `${t('live_updated')}${new Date().toLocaleTimeString(getLang()==='es' ? 'es-ES' : 'pl-PL')}`;
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
+      .withFailureHandler(err => !silent && setStatus('importStatus',t('stats_err')+err.message,'err'))
       .getAdminStats(adminToken);
-  };
+  }
+
+  function startStatsRealtime() {
+    if (statsPollHandle) clearInterval(statsPollHandle);
+    statsPollHandle = setInterval(() => {
+      if (!document.hidden) loadStats(true);
+    }, 10000);
+  }
+
+  function showMissingPesels(plant) {
+    if (!requireAdmin()) return;
+    google.script.run
+      .withSuccessHandler(rows => {
+        document.getElementById('missingListTitle').textContent = `${t('missing_for')}${plant} (${rows.length})`;
+        const list = document.getElementById('missingPeselList');
+        list.innerHTML = rows.length ? rows.map(p => `<li>${p}</li>`).join('') : `<li>${t('all_done')}</li>`;
+      })
+      .withFailureHandler(err => setStatus('importStatus',t('missing_err')+err.message,'err'))
+      .getAdminMissingByPlant(adminToken, plant);
+  }
+
+  document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
+  document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);
+  document.getElementById('langPL').onclick = () => setLang('pl');
+  document.getElementById('langES').onclick = () => setLang('es');
+  applyI18n();
+  if (!(window.google && google.script && google.script.run)) {
+    setStatus('adminAuthStatus', getLang()==='es'
+      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+  }
+  setEditIntlDrivingVisibility();
+  document.getElementById('statsBody').addEventListener('click', e => {
+    const btn = e.target.closest('.plant-link');
+    if (!btn) return;
+    showMissingPesels(btn.dataset.plant || '');
+  });
 
   document.getElementById('generateTestDbBtn').onclick = () => {
     if (!requireAdmin()) return;
 
     google.script.run
-      .withSuccessHandler(res=>setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok'))
+      .withSuccessHandler(res=>{
+        setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok');
+        loadStats(true);
+      })
       .withFailureHandler(err=>setStatus('importStatus','Błąd generowania bazy testowej: '+err.message,'err'))
       .adminGenerateTestDatabase(adminToken);
   };
