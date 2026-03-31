@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Panel administratora</title>
+  <style>
+    :root{--bg:#f3f6ff;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary-2:#4338ca;--border:#dbe4ff;--ok:#047857;--err:#b91c1c;--shadow:0 10px 28px rgba(44,62,120,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+    .container{max-width:1100px;margin:28px auto;padding:0 14px 28px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    .section-title{margin:0 0 12px;font-size:1.05rem}
+    .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .full{grid-column:1/-1}
+    label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
+    input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    textarea{min-height:120px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
+    .btn.secondary{background:#eef2ff;color:#3730a3;box-shadow:none}
+    .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
+    .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}.err{color:var(--err);background:#fef2f2;border-color:#fecaca}
+    .hidden{display:none}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #e2e8f0;padding:8px;text-align:left}
+    th{background:#f8fafc}
+    .divider{height:1px;background:#e2e8f0;margin:14px 0}
+    .link{color:#4338ca;text-decoration:none;font-weight:600}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
+  </style>
+</head>
+<body>
+<div class="container">
+  <section class="card">
+    <h3 class="section-title">Logowanie administratora</h3>
+    <p class="section-sub">Zaloguj się, aby zarządzać listami PESEL / Zakład / Mieszkanie.</p>
+    <div class="grid">
+      <div><label>Login</label><input id="adminLogin"></div>
+      <div><label>Hasło</label><input id="adminPassword" type="password"></div>
+    </div>
+    <div class="row"><button class="btn" id="adminAuthBtn">Zaloguj do panelu admin</button></div>
+    <div id="adminAuthStatus" class="status"></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>">← Wróć do panelu pracownika</a></div>
+  </section>
+
+  <div id="adminApp" class="hidden">
+    <?!= include('AdminPanel'); ?>
+  </div>
+</div>
+
+<script>
+  let adminToken = null;
+  let currentEmployeeKey = null;
+  function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
+  function requireAdmin(){ if (!adminToken) { setStatus('adminAuthStatus','Najpierw zaloguj się jako administrator.','err'); return false; } return true; }
+
+  function refreshCoreLists(){
+    if (!requireAdmin()) return;
+    google.script.run
+      .withSuccessHandler(res => {
+        const sel = document.getElementById('peselAssignPlant');
+        sel.innerHTML = '';
+        res.plants.forEach(p => {
+          const o = document.createElement('option');
+          o.value = p;
+          o.textContent = p;
+          sel.appendChild(o);
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd odświeżania list: '+err.message,'err'))
+      .adminGetCoreLists(adminToken);
+  }
+
+  document.getElementById('adminAuthBtn').onclick = () => {
+    google.script.run
+      .withSuccessHandler(res => {
+        adminToken = res.token;
+        setStatus('adminAuthStatus','Autoryzacja poprawna.','ok');
+        document.getElementById('adminApp').classList.remove('hidden');
+        refreshCoreLists();
+      })
+      .withFailureHandler(err=>setStatus('adminAuthStatus','Błąd logowania: '+err.message,'err'))
+      .adminLogin(document.getElementById('adminLogin').value.trim(), document.getElementById('adminPassword').value);
+  };
+
+  document.getElementById('saveListsBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(res => setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu list: '+err.message,'err'))
+      .adminSaveCoreLists(adminToken, {
+        pesels: document.getElementById('peselBulk').value,
+        plants: document.getElementById('plantBulk').value,
+        apartments: document.getElementById('apartmentBulk').value,
+        selectedPlant: document.getElementById('peselAssignPlant').value
+      });
+  };
+
+
+  document.getElementById('refreshListsBtn').onclick = () => {
+    refreshCoreLists();
+  };
+
+  document.getElementById('removeListsBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(() => setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
+      .adminRemoveFromLists(adminToken, {
+        pesels: document.getElementById('peselRemoveBulk').value,
+        plants: document.getElementById('plantRemoveBulk').value,
+        apartments: document.getElementById('apartmentRemoveBulk').value
+      });
+  };
+
+  document.getElementById('refreshEmployeesBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        const sel = document.getElementById('employeeSelect');
+        sel.innerHTML = '';
+        rows.forEach(r => {
+          const o = document.createElement('option');
+          o.value = JSON.stringify({pesel:r.pesel, plant:r.plant});
+          o.textContent = `${r.surname} ${r.name} | ${r.pesel} | ${r.plant}`;
+          sel.appendChild(o);
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd pobierania pracowników: '+err.message,'err'))
+      .adminListCompletedEmployees(adminToken);
+  };
+
+  document.getElementById('loadEmployeeBtn').onclick = () => {
+    if (!requireAdmin()) return;
+    const raw = document.getElementById('employeeSelect').value;
+    if (!raw) return;
+    const key = JSON.parse(raw);
+    currentEmployeeKey = key;
+
+    google.script.run
+      .withSuccessHandler(emp => {
+        Object.keys(emp).forEach(k => {
+          const el = document.getElementById(`edit_${k}`);
+          if (el) { el.value = emp[k] || ''; el.defaultValue = emp[k] || ''; }
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
+      .adminGetEmployeeForEdit(adminToken, key.pesel, key.plant);
+  };
+
+  document.getElementById('saveEmployeeBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    const payload = {};
+    [
+      'name','surname','pesel','plant','apartment','email','phone','bankAccount','birthDate','passportNumber','passportExpiry',
+      'arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','shirt','hoodie','pants','jacket','shoes','notes'
+    ].forEach(k => {
+      const el = document.getElementById(`edit_${k}`);
+      payload[k] = el ? el.value : '';
+    });
+    payload.oldPesel = currentEmployeeKey ? currentEmployeeKey.pesel : '';
+    payload.oldPlant = currentEmployeeKey ? currentEmployeeKey.plant : '';
+    payload.oldName = document.getElementById('edit_name').defaultValue || '';
+    payload.oldSurname = document.getElementById('edit_surname').defaultValue || '';
+
+    google.script.run
+      .withSuccessHandler(() => setStatus('importStatus', 'Zapisano zmiany pracownika.', 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu pracownika: '+err.message,'err'))
+      .adminSaveEmployeeByAdmin(adminToken, payload);
+  };
+
+  document.getElementById('refreshStatsBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        const body = document.getElementById('statsBody');
+        body.innerHTML = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.plant}</td><td>${r.completed}</td><td>${r.total}</td>`;
+          body.appendChild(tr);
+        });
+      })
+      .withFailureHandler(err=>setStatus('importStatus','Błąd statystyk: '+err.message,'err'))
+      .getAdminStats(adminToken);
+  };
+
+  document.getElementById('generateTestDbBtn').onclick = () => {
+    if (!requireAdmin()) return;
+
+    google.script.run
+      .withSuccessHandler(res=>setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok'))
+      .withFailureHandler(err=>setStatus('importStatus','Błąd generowania bazy testowej: '+err.message,'err'))
+      .adminGenerateTestDatabase(adminToken);
+  };
+</script>
+</body>
+</html>

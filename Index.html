@@ -3,211 +3,279 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Form + Admin Import</title>
+  <title>Panel pracownika</title>
   <style>
-    body{font-family:Arial;max-width:1100px;margin:20px auto;padding:0 12px;background:#f6f7fb}
-    .card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px}
+    :root{
+      --bg:#f3f6ff;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --primary:#4f46e5;
+      --primary-2:#4338ca;
+      --border:#dbe4ff;
+      --ok:#047857;
+      --err:#b91c1c;
+      --shadow:0 10px 28px rgba(44,62,120,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top right, #dbe4ff 0%, transparent 40%),
+        radial-gradient(circle at top left, #eef2ff 0%, transparent 45%),
+        var(--bg);
+    }
+    .container{max-width:1100px;margin:28px auto;padding:0 14px 28px}
+    .hero{margin-bottom:16px}
+    .hero h1{margin:0 0 6px;font-size:1.5rem}
+    .hero p{margin:0;color:var(--muted)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    .section-title{margin:0 0 12px;font-size:1.05rem}
+    .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
-    input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px}
-    textarea{min-height:80px}
-    .btn{padding:10px 14px;border:none;border-radius:8px;cursor:pointer;font-weight:700;background:#4f46e5;color:#fff}
-    .btn2{background:#eef2ff;color:#3730a3}
-    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
+    textarea{min-height:90px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 6px 16px rgba(79,70,229,.24)}
+    .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
+    .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}
+    .err{color:var(--err);background:#fef2f2;border-color:#fecaca}
+    .admin-link{display:inline-block;margin-top:4px;color:#4338ca;text-decoration:none;font-weight:600}
+    .admin-link:hover{text-decoration:underline}
     .hidden{display:none}
-    .status{margin-top:8px;font-weight:700}
-    .ok{color:#047857}.err{color:#b91c1c}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border:1px solid #ddd;padding:6px;text-align:left}
-    @media(max-width:860px){.grid{grid-template-columns:1fr}}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
   </style>
 </head>
 <body>
+<div class="container">
+  <header class="hero">
+    <h1>Formularz pracownika</h1>
+    <p>Podaj PESEL, aby rozpocząć formularz.</p>
+  </header>
 
-<div class="card">
-  <h3>Logowanie</h3>
-  <div class="grid">
-    <div><label>Imię</label><input id="loginName"></div>
-    <div><label>Nazwisko</label><input id="loginSurname"></div>
-    <div><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
-    <div><label>Zakład</label><input id="loginPlant"></div>
-  </div>
-  <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
-  <div id="loginStatus" class="status"></div>
-</div>
-
-<div class="card">
-  <h3>Panel admin – import Excel</h3>
-  <div class="grid">
-    <div><label>PIN admin</label><input id="adminPin" type="password"></div>
-    <div><label>File ID Excel (Drive)</label><input id="excelFileId"></div>
-    <div><label>Arkusz</label><select id="excelSheetName"></select></div>
-    <div><label>Tabela docelowa</label>
-      <select id="targetTable">
-        <option value="login_seed">login_seed</option>
-        <option value="kontakty">kontakty</option>
-        <option value="ubrania_robocze">ubrania_robocze</option>
-      </select>
+  <section class="card">
+    <h3 class="section-title">Logowanie pracownika</h3>
+    <p class="section-sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
+    <div class="grid">
+      <div class="full"><label>PESEL</label><input id="loginPesel" maxlength="11"></div>
     </div>
-    <div><label>Row selector (np. 2,5,7-10)</label><input id="rowSelector" placeholder="opcjonalnie"></div>
-    <div><label>Zakres start/end (gdy brak row selector)</label>
-      <div class="grid">
-        <input id="startRow" type="number" value="2">
-        <input id="endRow" type="number" value="50">
-      </div>
+    <div class="row"><button class="btn" id="loginBtn">Zaloguj</button></div>
+    <div id="loginStatus" class="status"></div>
+    <a class="admin-link" href="<?= adminUrl ?>">Przejdź do panelu administratora</a>
+  </section>
+
+  <section class="card hidden" id="employeeFormWrap">
+    <h3 class="section-title">Formularz pracownika</h3>
+    <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
+    <div class="grid">
+      <div><label>Imię</label><input id="f_name"></div>
+      <div><label>Nazwisko</label><input id="f_surname"></div>
+      <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="f_phoneNumber" placeholder="np. 600700800"></div></div>
+      <div><label>Email</label><input id="f_email" type="email"></div>
+      <div><label>Zakład</label><select id="f_plant"><option>Krakow</option><option>Warszawa</option><option>Wroclaw</option><option>Poznan</option><option>Gdansk</option></select></div>
+      <div><label>Mieszkanie</label><select id="f_apartment"><option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option></select></div>
+      <div><label>Numer konta bankowego</label><input id="f_bankAccount"></div>
+      <div><label>Data urodzenia</label><input id="f_birthDate" type="date"></div>
+      <div><label>Numer paszportu</label><input id="f_passportNumber"></div>
+      <div><label>Data ważności paszportu</label><input id="f_passportExpiry" type="date"></div>
+      <div><label>Data przyjazdu do Polski</label><input id="f_arrivalDate" type="date"></div>
+      <div><label>Data rozpoczęcia pierwszej pracy</label><input id="f_firstWorkDate" type="date"></div>
+      <div><label>PESEL</label><input id="f_pesel" readonly></div>
+      <div><label>Czy posiadasz prawo jazdy międzynarodowe?</label><select id="f_intlDrivingLicense"><option value="nie">nie</option><option value="tak">tak</option></select></div>
+      <div id="intlDrivingExpiryWrap" class="hidden"><label>Data ważności prawa jazdy</label><input id="f_intlDrivingLicenseExpiry" type="date"></div>
+      <div id="intlDrivingPhotoWrap" class="hidden"><label>Zdjęcie prawa jazdy</label><input id="f_drivingLicensePhoto" type="file" accept="image/*"></div>
+
+      <div class="full"><h4 class="section-title" style="margin-top:6px">Rozmiary ubrań</h4></div>
+      <div><label>Koszulka</label><select id="f_shirt"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Bluza</label><select id="f_hoodie"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Kurtka</label><select id="f_jacket"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Spodnie</label><select id="f_pants"><option>46</option><option>48</option><option>50</option><option>52</option><option>54</option><option>56</option><option>58</option><option>60</option><option>62</option></select></div>
+      <div><label>Buty</label><select id="f_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
+
+      <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
+      <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
     </div>
-  </div>
-
-  <div class="row">
-    <button class="btn btn2" id="loadSheetsBtn">1) Wczytaj arkusze</button>
-    <button class="btn btn2" id="suggestMapBtn">2) Auto-mapowanie</button>
-    <button class="btn btn2" id="previewBtn">3) Podgląd wierszy</button>
-    <button class="btn" id="importBtn">4) Importuj</button>
-  </div>
-
-  <div id="importStatus" class="status"></div>
-
-  <div id="mappingWrap" class="hidden">
-    <h4>Mapowanie kolumn (zmień ręcznie jeśli chcesz)</h4>
-    <table>
-      <thead><tr><th>Kolumna w Excel</th><th>Mapuj do</th></tr></thead>
-      <tbody id="mappingBody"></tbody>
-    </table>
-  </div>
-
-  <div id="previewWrap" class="hidden">
-    <h4>Podgląd</h4>
-    <table><tbody id="previewBody"></tbody></table>
-  </div>
+    <div class="row"><button class="btn" id="saveFormBtn">Zapisz formularz</button></div>
+    <div id="formStatus" class="status"></div>
+  </section>
 </div>
 
 <script>
-  let convertedSpreadsheetId = null;
-  let currentHeader = [];
-  let allowedFields = [];
-  let mapping = {};
+  let sessionToken = null;
 
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
 
-  document.getElementById('loadSheetsBtn').onclick = () => {
-    google.script.run
-      .withSuccessHandler(res=>{
-        convertedSpreadsheetId = res.convertedSpreadsheetId;
-        const sel = document.getElementById('excelSheetName');
-        sel.innerHTML = '';
-        res.sheetNames.forEach(n => {
-          const o = document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
-        });
-        setStatus('importStatus','Arkusze wczytane.','ok');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd: '+err.message,'err'))
-      .adminListExcelSheets(
-        document.getElementById('adminPin').value.trim(),
-        document.getElementById('excelFileId').value.trim()
-      );
-  };
 
-  document.getElementById('suggestMapBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    google.script.run
-      .withSuccessHandler(res=>{
-        currentHeader = res.header;
-        mapping = res.suggestedMapping;
-        allowedFields = res.allowedFields;
-        renderMappingTable();
-        document.getElementById('mappingWrap').classList.remove('hidden');
-        setStatus('importStatus','Auto-mapowanie gotowe.','ok');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd mapowania: '+err.message,'err'))
-      .adminSuggestMapping(
-        document.getElementById('adminPin').value.trim(),
-        convertedSpreadsheetId,
-        document.getElementById('excelSheetName').value,
-        document.getElementById('targetTable').value
-      );
-  };
+  function setSelectOptions(selectId, values, fallback) {
+    const el = document.getElementById(selectId);
+    if (!values || !values.length) return;
+    el.innerHTML = '';
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      el.appendChild(o);
+    });
+    if (fallback) el.value = fallback;
+  }
 
-  function renderMappingTable(){
-    const body = document.getElementById('mappingBody');
-    body.innerHTML = '';
-    currentHeader.forEach(h=>{
-      const tr = document.createElement('tr');
-      const td1 = document.createElement('td'); td1.textContent = h;
-      const td2 = document.createElement('td');
-      const sel = document.createElement('select');
-      allowedFields.forEach(f=>{
-        const o = document.createElement('option');
-        o.value = f; o.textContent = f;
-        if ((mapping[h] || '__SKIP__') === f) o.selected = true;
-        sel.appendChild(o);
-      });
-      sel.onchange = ()=> mapping[h] = sel.value;
-      td2.appendChild(sel);
-      tr.appendChild(td1); tr.appendChild(td2);
-      body.appendChild(tr);
+  function setIntlDrivingVisibility(){
+    const show = document.getElementById('f_intlDrivingLicense').value === 'tak';
+    document.getElementById('intlDrivingExpiryWrap').classList.toggle('hidden', !show);
+    document.getElementById('intlDrivingPhotoWrap').classList.toggle('hidden', !show);
+  }
+
+  function fillEmployeeForm(employee){
+    document.getElementById('f_name').value = employee.name || '';
+    document.getElementById('f_surname').value = employee.surname || '';
+    document.getElementById('f_pesel').value = employee.pesel || '';
+    document.getElementById('f_email').value = employee.email || '';
+    setSelectOptions('f_plant', employee.plantOptions, employee.plant || 'Krakow');
+    setSelectOptions('f_apartment', employee.apartmentOptions, employee.apartment || 'Mieszkanie 1');
+    document.getElementById('f_plant').value = employee.plant || document.getElementById('f_plant').value;
+    document.getElementById('f_apartment').value = employee.apartment || document.getElementById('f_apartment').value;
+    document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
+    document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
+    document.getElementById('f_bankAccount').value = employee.bankAccount || '';
+    document.getElementById('f_birthDate').value = employee.birthDate || '';
+    document.getElementById('f_passportNumber').value = employee.passportNumber || '';
+    document.getElementById('f_passportExpiry').value = employee.passportExpiry || '';
+    document.getElementById('f_arrivalDate').value = employee.arrivalDate || '';
+    document.getElementById('f_firstWorkDate').value = employee.firstWorkDate || '';
+    document.getElementById('f_intlDrivingLicense').value = (employee.intlDrivingLicense || 'nie').toLowerCase() === 'tak' ? 'tak' : 'nie';
+    document.getElementById('f_intlDrivingLicenseExpiry').value = employee.intlDrivingLicenseExpiry || '';
+    document.getElementById('f_shirt').value = employee.shirt || 'm';
+    document.getElementById('f_hoodie').value = employee.hoodie || 'm';
+    document.getElementById('f_pants').value = employee.pants || '50';
+    document.getElementById('f_jacket').value = employee.jacket || 'm';
+    document.getElementById('f_shoes').value = employee.shoes || '40';
+    document.getElementById('f_notes').value = employee.notes || '';
+    setIntlDrivingVisibility();
+  }
+
+  function readFileAsBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const out = String(reader.result || '');
+        resolve(out.includes(',') ? out.split(',')[1] : out);
+      };
+      reader.onerror = () => reject(new Error('Nie udało się odczytać pliku.'));
+      reader.readAsDataURL(file);
     });
   }
 
-  document.getElementById('previewBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    google.script.run
-      .withSuccessHandler(res=>{
-        const body = document.getElementById('previewBody');
-        body.innerHTML = '';
-        const h = document.createElement('tr');
-        h.innerHTML = `<th colspan="2">Nagłówki: ${res.header.join(' | ')}</th>`;
-        body.appendChild(h);
-        res.rows.forEach(r=>{
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>Wiersz ${r.rowNumber}</td><td>${r.rowValues.join(' | ')}</td>`;
-          body.appendChild(tr);
-        });
-        document.getElementById('previewWrap').classList.remove('hidden');
-      })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd podglądu: '+err.message,'err'))
-      .adminPreviewExcel(
-        document.getElementById('adminPin').value.trim(),
-        convertedSpreadsheetId,
-        document.getElementById('excelSheetName').value,
-        document.getElementById('rowSelector').value.trim(),
-        Number(document.getElementById('startRow').value || 2),
-        Number(document.getElementById('endRow').value || 50)
-      );
-  };
+  document.getElementById('f_intlDrivingLicense').onchange = setIntlDrivingVisibility;
 
-  document.getElementById('importBtn').onclick = () => {
-    if (!convertedSpreadsheetId) return setStatus('importStatus','Najpierw wczytaj arkusze.','err');
-    if (!currentHeader.length) return setStatus('importStatus','Najpierw auto-mapowanie.','err');
-
-    google.script.run
-      .withSuccessHandler(res=>setStatus('importStatus',`Zaimportowano ${res.imported} wierszy.`, 'ok'))
-      .withFailureHandler(err=>setStatus('importStatus','Błąd importu: '+err.message,'err'))
-      .adminImportWithFieldSelection(
-        document.getElementById('adminPin').value.trim(),
-        {
-          convertedSpreadsheetId,
-          sheetName: document.getElementById('excelSheetName').value,
-          targetTable: document.getElementById('targetTable').value,
-          rowSelector: document.getElementById('rowSelector').value.trim(),
-          startRow: Number(document.getElementById('startRow').value || 2),
-          endRow: Number(document.getElementById('endRow').value || 50),
-          mapping
-        }
-      );
-  };
-
-  // Login zostawiam prosty (tak jak wcześniej)
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
-      .withSuccessHandler(()=>setStatus('loginStatus','OK','ok'))
+      .withSuccessHandler((res)=>{
+        sessionToken = res.token;
+        fillEmployeeForm(res.employee || {});
+        document.getElementById('employeeFormWrap').classList.remove('hidden');
+        setStatus('loginStatus','OK - formularz gotowy do edycji.','ok');
+        setStatus('formStatus','', '');
+      })
       .withFailureHandler(err=>setStatus('loginStatus','Błąd: '+err.message,'err'))
       .loginByIdentity({
-        name:document.getElementById('loginName').value.trim(),
-        surname:document.getElementById('loginSurname').value.trim(),
-        pesel:document.getElementById('loginPesel').value.trim(),
-        plant:document.getElementById('loginPlant').value.trim()
+        pesel:document.getElementById('loginPesel').value.trim()
       });
   };
+
+  let autoSaveTimer = null;
+  let lastUploadedPdfName = '';
+  let lastUploadedDlName = '';
+
+  async function buildPayload(includeFiles = false) {
+    const payload = {
+      token: sessionToken,
+      name: document.getElementById('f_name').value.trim(),
+      surname: document.getElementById('f_surname').value.trim(),
+      plant: document.getElementById('f_plant').value,
+      email: document.getElementById('f_email').value.trim(),
+      phonePrefix: document.getElementById('f_phonePrefix').value,
+      phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
+      apartment: document.getElementById('f_apartment').value,
+      hireDate: '',
+      bankAccount: document.getElementById('f_bankAccount').value.trim(),
+      birthDate: document.getElementById('f_birthDate').value,
+      passportNumber: document.getElementById('f_passportNumber').value.trim(),
+      passportExpiry: document.getElementById('f_passportExpiry').value,
+      arrivalDate: document.getElementById('f_arrivalDate').value,
+      firstWorkDate: document.getElementById('f_firstWorkDate').value,
+      intlDrivingLicense: document.getElementById('f_intlDrivingLicense').value,
+      intlDrivingLicenseExpiry: document.getElementById('f_intlDrivingLicenseExpiry').value,
+      shirt: document.getElementById('f_shirt').value,
+      hoodie: document.getElementById('f_hoodie').value,
+      pants: document.getElementById('f_pants').value,
+      jacket: document.getElementById('f_jacket').value,
+      shoes: document.getElementById('f_shoes').value,
+      notes: document.getElementById('f_notes').value.trim()
+    };
+
+    if (includeFiles) {
+      const attachment = document.getElementById('f_attachment').files[0];
+      if (attachment && attachment.name !== lastUploadedPdfName) {
+        payload.attachmentBase64 = await readFileAsBase64(attachment);
+        payload.attachmentName = attachment.name;
+      }
+
+      const drivingPhoto = document.getElementById('f_drivingLicensePhoto').files[0];
+      if (payload.intlDrivingLicense === 'tak' && drivingPhoto && drivingPhoto.name !== lastUploadedDlName) {
+        payload.drivingLicensePhotoBase64 = await readFileAsBase64(drivingPhoto);
+        payload.drivingLicensePhotoName = drivingPhoto.name;
+        payload.drivingLicensePhotoMimeType = drivingPhoto.type || 'image/jpeg';
+      }
+    }
+
+    return payload;
+  }
+
+  async function saveForm(autoMode = false, includeFiles = false) {
+    if (!sessionToken) return;
+
+    try {
+      const payload = await buildPayload(includeFiles);
+      google.script.run
+        .withSuccessHandler(res => {
+          if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
+          if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
+          setStatus('formStatus', autoMode ? 'Autozapis OK' : (res.message || 'Zapisano.'), 'ok');
+        })
+        .withFailureHandler(err => setStatus('formStatus', 'Błąd zapisu: ' + err.message, 'err'))
+        .saveEmployeeForm(payload);
+    } catch (err) {
+      setStatus('formStatus', 'Błąd przygotowania danych: ' + err.message, 'err');
+    }
+  }
+
+  function scheduleAutoSave() {
+    if (!sessionToken) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
+  }
+
+  document.getElementById('saveFormBtn').onclick = async () => {
+    if (!sessionToken) return setStatus('formStatus','Najpierw zaloguj się.','err');
+    await saveForm(false, true);
+  };
+
+  // Autozapis danych tekstowych/wyborów
+  document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
+    if (el.id === 'f_attachment' || el.id === 'f_drivingLicensePhoto') return;
+    el.addEventListener('input', scheduleAutoSave);
+    el.addEventListener('change', scheduleAutoSave);
+  });
+
+  // Autozapis plików od razu po wyborze
+  document.getElementById('f_attachment').addEventListener('change', () => saveForm(true, true));
+  document.getElementById('f_drivingLicensePhoto').addEventListener('change', () => saveForm(true, true));
+
 </script>
 </body>
 </html>
