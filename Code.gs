@@ -56,7 +56,7 @@ function initAll() {
   const submissions = getOrCreateSheet_(ss, CFG.SUBMISSIONS_SHEET);
 
   ensureHeader_(loginSeed, ['name','surname','pesel','plant']);
-  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes']);
+  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry']);
   ensureHeader_(clothes, ['name','surname','plant','shirt','hoodie','pants','jacket','shoes']);
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
 
@@ -79,7 +79,7 @@ function syncSeedToCoreTables_() {
     if (!name || !surname || !pesel || !plant) continue;
 
     upsertByKey_(contacts,
-      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
       ['name','surname','pesel','plant'],
       { name, surname, pesel, plant, email:'', phone:'', workplace:plant, apartment:'', hireDate:'', clothesSize:'', shoesSize:'', notes:'' }
     );
@@ -118,7 +118,15 @@ function loginByIdentity(identity) {
       phone:safe_(vals[i][h.phone]),
       apartment:safe_(vals[i][h.apartment]),
       hireDate:safe_(vals[i][h.hireDate]),
-      notes:safe_(vals[i][h.notes])
+      notes:safe_(vals[i][h.notes]),
+      bankAccount:safe_(vals[i][h.bankAccount]),
+      birthDate:safe_(vals[i][h.birthDate]),
+      passportNumber:safe_(vals[i][h.passportNumber]),
+      passportExpiry:safe_(vals[i][h.passportExpiry]),
+      arrivalDate:safe_(vals[i][h.arrivalDate]),
+      firstWorkDate:safe_(vals[i][h.firstWorkDate]),
+      intlDrivingLicense:safe_(vals[i][h.intlDrivingLicense]),
+      intlDrivingLicenseExpiry:safe_(vals[i][h.intlDrivingLicenseExpiry])
     });
   }
 
@@ -155,7 +163,7 @@ function saveEmployeeForm(payload) {
   if (!['+48', '+57'].includes(phonePrefix)) throw new Error('Kierunkowy: +48 albo +57');
 
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
-    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
     ['name','surname','pesel','plant'],
     {
       name, surname, pesel, plant,
@@ -166,7 +174,15 @@ function saveEmployeeForm(payload) {
       hireDate: safe_(payload.hireDate),
       clothesSize: '',
       shoesSize: safe_(payload.shoes),
-      notes: safe_(payload.notes)
+      notes: safe_(payload.notes),
+      bankAccount: safe_(payload.bankAccount),
+      birthDate: safe_(payload.birthDate),
+      passportNumber: safe_(payload.passportNumber),
+      passportExpiry: safe_(payload.passportExpiry),
+      arrivalDate: safe_(payload.arrivalDate),
+      firstWorkDate: safe_(payload.firstWorkDate),
+      intlDrivingLicense: safe_(payload.intlDrivingLicense),
+      intlDrivingLicenseExpiry: safe_(payload.intlDrivingLicenseExpiry)
     }
   );
 
@@ -196,6 +212,14 @@ function saveEmployeeForm(payload) {
       phone:`${phonePrefix} ${safe_(payload.phoneNumber)}`.trim(),
       apartment:safe_(payload.apartment),
       hireDate:safe_(payload.hireDate),
+      bankAccount:safe_(payload.bankAccount),
+      birthDate:safe_(payload.birthDate),
+      passportNumber:safe_(payload.passportNumber),
+      passportExpiry:safe_(payload.passportExpiry),
+      arrivalDate:safe_(payload.arrivalDate),
+      firstWorkDate:safe_(payload.firstWorkDate),
+      intlDrivingLicense:safe_(payload.intlDrivingLicense),
+      intlDrivingLicenseExpiry:safe_(payload.intlDrivingLicenseExpiry),
       shirt:safe_(payload.shirt), hoodie:safe_(payload.hoodie), pants:safe_(payload.pants), jacket:safe_(payload.jacket), shoes:safe_(payload.shoes),
       notes:safe_(payload.notes),
       updatedAt:new Date().toISOString()
@@ -212,6 +236,16 @@ function saveEmployeeForm(payload) {
       throw new Error(`PDF większy niż ${CFG.MAX_UPLOAD_PDF_MB} MB`);
     }
     folder.createFile(blob);
+  }
+
+  if (payload.drivingLicensePhotoBase64 && payload.drivingLicensePhotoName) {
+    const imgMime = safe_(payload.drivingLicensePhotoMimeType) || 'image/jpeg';
+    const imgBlob = Utilities.newBlob(
+      Utilities.base64Decode(payload.drivingLicensePhotoBase64),
+      imgMime,
+      safe_(payload.drivingLicensePhotoName) || 'prawo_jazdy.jpg'
+    );
+    folder.createFile(imgBlob);
   }
 
   return { ok:true, message:'Zapis przebiegł pomyślnie, dziękujemy.' };
@@ -276,7 +310,7 @@ function adminGenerateTestDatabase(adminToken) {
   const submissions = getSheet_(CFG.SUBMISSIONS_SHEET);
 
   const loginSeedHeader = ['name','surname','pesel','plant'];
-  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'];
+  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
   const clothesHeader = ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
   const submissionsHeader = ['name','surname','pesel','plant','submittedAt'];
 
@@ -284,26 +318,27 @@ function adminGenerateTestDatabase(adminToken) {
     {
       name:'Jan', surname:'Kowalski', pesel:'90010112345', plant:'Krakow',
       email:'jan.kowalski@example.com', phone:'+48 600700800', workplace:'Krakow', apartment:'ul. Testowa 1/2',
-      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1',
+      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1', bankAccount:'11 2222 3333 4444 5555 6666 7777', birthDate:'1990-01-01', passportNumber:'PA1234567', passportExpiry:'2030-12-31', arrivalDate:'2021-04-10', firstWorkDate:'2021-04-20', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2028-05-30',
       shirt:'L', hoodie:'L', pants:'M', jacket:'L', shoes:'43'
     },
     {
       name:'Anna', surname:'Nowak', pesel:'92020254321', plant:'Warszawa',
       email:'anna.nowak@example.com', phone:'+48 601602603', workplace:'Warszawa', apartment:'ul. Próbna 5/8',
-      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2',
+      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2', bankAccount:'22 3333 4444 5555 6666 7777 8888', birthDate:'1992-02-02', passportNumber:'PB7654321', passportExpiry:'2029-09-15', arrivalDate:'2022-06-01', firstWorkDate:'2022-06-15', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:'',
       shirt:'M', hoodie:'M', pants:'S', jacket:'M', shoes:'39'
     },
     {
       name:'Carlos', surname:'Gomez', pesel:'85030311111', plant:'Wroclaw',
       email:'carlos.gomez@example.com', phone:'+57 3201234567', workplace:'Wroclaw', apartment:'Calle 10 #5-20',
-      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3',
+      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3', bankAccount:'33 4444 5555 6666 7777 8888 9999', birthDate:'1985-03-03', passportNumber:'PC1112223', passportExpiry:'2028-08-08', arrivalDate:'2020-01-12', firstWorkDate:'2020-02-01', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2027-01-10',
       shirt:'XL', hoodie:'XL', pants:'L', jacket:'XL', shoes:'44'
     }
   ];
 
   writeSheetData_(loginSeed, loginSeedHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant]));
   writeSheetData_(contacts, contactsHeader, employees.map(e => [
-    e.name, e.surname, e.email, e.pesel, e.phone, e.workplace, e.apartment, e.plant, e.hireDate, e.clothesSize, e.shoesSize, e.notes
+    e.name, e.surname, e.email, e.pesel, e.phone, e.workplace, e.apartment, e.plant, e.hireDate, e.clothesSize, e.shoesSize, e.notes,
+    e.bankAccount, e.birthDate, e.passportNumber, e.passportExpiry, e.arrivalDate, e.firstWorkDate, e.intlDrivingLicense, e.intlDrivingLicenseExpiry
   ]));
   writeSheetData_(clothes, clothesHeader, employees.map(e => [e.name, e.surname, e.plant, e.shirt, e.hoodie, e.pants, e.jacket, e.shoes]));
   writeSheetData_(submissions, submissionsHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant, new Date().toISOString()]));
@@ -387,12 +422,15 @@ function adminImportWithFieldSelection(adminToken, params) {
     if (targetTable === CFG.CONTACTS_SHEET) {
       if (!rec.name || !rec.surname || !rec.pesel || !rec.plant) return;
       upsertByKey_(target,
-        ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes'],
+        ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
         ['name','surname','pesel','plant'],
         {
           name:rec.name || '', surname:rec.surname || '', pesel:rec.pesel || '', plant:rec.plant || '',
           email:rec.email || '', phone:rec.phone || '', workplace:rec.workplace || rec.plant || '',
-          apartment:rec.apartment || '', hireDate:rec.hireDate || '', clothesSize:'', shoesSize:rec.shoes || '', notes:rec.notes || ''
+          apartment:rec.apartment || '', hireDate:rec.hireDate || '', clothesSize:'', shoesSize:rec.shoes || '', notes:rec.notes || '',
+          bankAccount:rec.bankAccount || '', birthDate:rec.birthDate || '', passportNumber:rec.passportNumber || '',
+          passportExpiry:rec.passportExpiry || '', arrivalDate:rec.arrivalDate || '', firstWorkDate:rec.firstWorkDate || '',
+          intlDrivingLicense:rec.intlDrivingLicense || '', intlDrivingLicenseExpiry:rec.intlDrivingLicenseExpiry || ''
         }
       );
       imported++;
@@ -497,7 +535,7 @@ function buildAutoMapping_(headerRow) {
 
 function getAllowedFieldsForTarget_(targetTable) {
   if (targetTable === CFG.LOGIN_SEED_SHEET) return ['name','surname','pesel','plant'];
-  if (targetTable === CFG.CONTACTS_SHEET) return ['name','surname','pesel','plant','email','phone','workplace','apartment','hireDate','notes','shoes'];
+  if (targetTable === CFG.CONTACTS_SHEET) return ['name','surname','pesel','plant','email','phone','workplace','apartment','hireDate','notes','shoes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
   if (targetTable === CFG.CLOTHES_SHEET) return ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
   return [];
 }

@@ -73,21 +73,28 @@
     <h3 class="section-title">Formularz pracownika</h3>
     <p class="section-sub">Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.</p>
     <div class="grid">
+      <div><label>Imię</label><input id="f_name" readonly></div>
+      <div><label>Nazwisko</label><input id="f_surname" readonly></div>
+      <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="f_phoneNumber" placeholder="np. 600700800"></div></div>
       <div><label>Email</label><input id="f_email" type="email"></div>
-      <div>
-        <label>Telefon</label>
-        <div class="grid" style="grid-template-columns:130px 1fr;gap:8px">
-          <select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select>
-          <input id="f_phoneNumber" placeholder="np. 600700800">
-        </div>
-      </div>
-      <div><label>Mieszkanie</label><input id="f_apartment"></div>
-      <div><label>Data zatrudnienia</label><input id="f_hireDate" placeholder="YYYY-MM-DD"></div>
-      <div><label>Koszulka</label><input id="f_shirt"></div>
-      <div><label>Bluza</label><input id="f_hoodie"></div>
-      <div><label>Spodnie</label><input id="f_pants"></div>
-      <div><label>Kurtka</label><input id="f_jacket"></div>
-      <div><label>Buty</label><input id="f_shoes"></div>
+      <div><label>Numer konta bankowego</label><input id="f_bankAccount"></div>
+      <div><label>Data urodzenia</label><input id="f_birthDate" type="date"></div>
+      <div><label>Numer paszportu</label><input id="f_passportNumber"></div>
+      <div><label>Data ważności paszportu</label><input id="f_passportExpiry" type="date"></div>
+      <div><label>Data przyjazdu do Polski</label><input id="f_arrivalDate" type="date"></div>
+      <div><label>Data rozpoczęcia pierwszej pracy</label><input id="f_firstWorkDate" type="date"></div>
+      <div><label>PESEL</label><input id="f_pesel" readonly></div>
+      <div><label>Czy posiadasz prawo jazdy międzynarodowe?</label><select id="f_intlDrivingLicense"><option value="nie">nie</option><option value="tak">tak</option></select></div>
+      <div id="intlDrivingExpiryWrap" class="hidden"><label>Data ważności prawa jazdy</label><input id="f_intlDrivingLicenseExpiry" type="date"></div>
+      <div id="intlDrivingPhotoWrap" class="hidden"><label>Zdjęcie prawa jazdy</label><input id="f_drivingLicensePhoto" type="file" accept="image/*"></div>
+
+      <div class="full"><h4 class="section-title" style="margin-top:6px">Rozmiary ubrań</h4></div>
+      <div><label>Koszulka</label><select id="f_shirt"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Bluza</label><select id="f_hoodie"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Kurtka</label><select id="f_jacket"><option>xs</option><option>s</option><option>m</option><option>l</option><option>xl</option><option>2xl</option><option>3xl</option></select></div>
+      <div><label>Spodnie</label><select id="f_pants"><option>46</option><option>48</option><option>50</option><option>52</option><option>54</option><option>56</option><option>58</option><option>60</option><option>62</option></select></div>
+      <div><label>Buty</label><select id="f_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
+
       <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
       <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
     </div>
@@ -101,18 +108,36 @@
 
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
 
+  function setIntlDrivingVisibility(){
+    const show = document.getElementById('f_intlDrivingLicense').value === 'tak';
+    document.getElementById('intlDrivingExpiryWrap').classList.toggle('hidden', !show);
+    document.getElementById('intlDrivingPhotoWrap').classList.toggle('hidden', !show);
+  }
+
   function fillEmployeeForm(employee){
+    document.getElementById('f_name').value = employee.name || '';
+    document.getElementById('f_surname').value = employee.surname || '';
+    document.getElementById('f_pesel').value = employee.pesel || '';
     document.getElementById('f_email').value = employee.email || '';
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
     document.getElementById('f_apartment').value = employee.apartment || '';
     document.getElementById('f_hireDate').value = employee.hireDate || '';
-    document.getElementById('f_shirt').value = employee.shirt || '';
-    document.getElementById('f_hoodie').value = employee.hoodie || '';
-    document.getElementById('f_pants').value = employee.pants || '';
-    document.getElementById('f_jacket').value = employee.jacket || '';
-    document.getElementById('f_shoes').value = employee.shoes || '';
+    document.getElementById('f_bankAccount').value = employee.bankAccount || '';
+    document.getElementById('f_birthDate').value = employee.birthDate || '';
+    document.getElementById('f_passportNumber').value = employee.passportNumber || '';
+    document.getElementById('f_passportExpiry').value = employee.passportExpiry || '';
+    document.getElementById('f_arrivalDate').value = employee.arrivalDate || '';
+    document.getElementById('f_firstWorkDate').value = employee.firstWorkDate || '';
+    document.getElementById('f_intlDrivingLicense').value = (employee.intlDrivingLicense || 'nie').toLowerCase() === 'tak' ? 'tak' : 'nie';
+    document.getElementById('f_intlDrivingLicenseExpiry').value = employee.intlDrivingLicenseExpiry || '';
+    document.getElementById('f_shirt').value = employee.shirt || 'm';
+    document.getElementById('f_hoodie').value = employee.hoodie || 'm';
+    document.getElementById('f_pants').value = employee.pants || '50';
+    document.getElementById('f_jacket').value = employee.jacket || 'm';
+    document.getElementById('f_shoes').value = employee.shoes || '40';
     document.getElementById('f_notes').value = employee.notes || '';
+    setIntlDrivingVisibility();
   }
 
   function readFileAsBase64(file){
@@ -126,6 +151,8 @@
       reader.readAsDataURL(file);
     });
   }
+
+  document.getElementById('f_intlDrivingLicense').onchange = setIntlDrivingVisibility;
 
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
@@ -152,11 +179,19 @@
       phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
       apartment: document.getElementById('f_apartment').value.trim(),
       hireDate: document.getElementById('f_hireDate').value.trim(),
-      shirt: document.getElementById('f_shirt').value.trim(),
-      hoodie: document.getElementById('f_hoodie').value.trim(),
-      pants: document.getElementById('f_pants').value.trim(),
-      jacket: document.getElementById('f_jacket').value.trim(),
-      shoes: document.getElementById('f_shoes').value.trim(),
+      bankAccount: document.getElementById('f_bankAccount').value.trim(),
+      birthDate: document.getElementById('f_birthDate').value,
+      passportNumber: document.getElementById('f_passportNumber').value.trim(),
+      passportExpiry: document.getElementById('f_passportExpiry').value,
+      arrivalDate: document.getElementById('f_arrivalDate').value,
+      firstWorkDate: document.getElementById('f_firstWorkDate').value,
+      intlDrivingLicense: document.getElementById('f_intlDrivingLicense').value,
+      intlDrivingLicenseExpiry: document.getElementById('f_intlDrivingLicenseExpiry').value,
+      shirt: document.getElementById('f_shirt').value,
+      hoodie: document.getElementById('f_hoodie').value,
+      pants: document.getElementById('f_pants').value,
+      jacket: document.getElementById('f_jacket').value,
+      shoes: document.getElementById('f_shoes').value,
       notes: document.getElementById('f_notes').value.trim()
     };
 
@@ -167,6 +202,18 @@
         payload.attachmentName = attachment.name;
       } catch (err) {
         return setStatus('formStatus','Błąd odczytu PDF: '+err.message,'err');
+      }
+    }
+
+
+    const drivingPhoto = document.getElementById('f_drivingLicensePhoto').files[0];
+    if (payload.intlDrivingLicense === 'tak' && drivingPhoto) {
+      try {
+        payload.drivingLicensePhotoBase64 = await readFileAsBase64(drivingPhoto);
+        payload.drivingLicensePhotoName = drivingPhoto.name;
+        payload.drivingLicensePhotoMimeType = drivingPhoto.type || 'image/jpeg';
+      } catch (err) {
+        return setStatus('formStatus','Błąd odczytu zdjęcia prawa jazdy: '+err.message,'err');
       }
     }
 
