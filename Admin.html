@@ -60,13 +60,33 @@
     if (!requireAdmin()) return;
     google.script.run
       .withSuccessHandler(res => {
-        const sel = document.getElementById('peselAssignPlant');
-        sel.innerHTML = '';
-        res.plants.forEach(p => {
+        const plantSelects = [document.getElementById('peselAssignPlant'), document.getElementById('plantRemoveSelect')];
+        plantSelects.forEach(sel => {
+          sel.innerHTML = '<option value=>-- wybierz --</option>';
+          res.plants.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p;
+            o.textContent = p;
+            sel.appendChild(o);
+          });
+        });
+
+        const aptSel = document.getElementById('apartmentRemoveSelect');
+        aptSel.innerHTML = '<option value=>-- wybierz --</option>';
+        res.apartments.forEach(a => {
           const o = document.createElement('option');
-          o.value = p;
-          o.textContent = p;
-          sel.appendChild(o);
+          o.value = a;
+          o.textContent = a;
+          aptSel.appendChild(o);
+        });
+
+        const peselSel = document.getElementById('peselRemoveSelect');
+        peselSel.innerHTML = '<option value=>-- wybierz --</option>';
+        res.peselOptions.forEach(item => {
+          const o = document.createElement('option');
+          o.value = item.value;
+          o.textContent = item.label;
+          peselSel.appendChild(o);
         });
       })
       .withFailureHandler(err=>setStatus('importStatus','Błąd odświeżania list: '+err.message,'err'))
@@ -111,9 +131,9 @@
       .withSuccessHandler(() => setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok'))
       .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
       .adminRemoveFromLists(adminToken, {
-        pesels: document.getElementById('peselRemoveBulk').value,
-        plants: document.getElementById('plantRemoveBulk').value,
-        apartments: document.getElementById('apartmentRemoveBulk').value
+        peselKey: document.getElementById('peselRemoveSelect').value,
+        plant: document.getElementById('plantRemoveSelect').value,
+        apartment: document.getElementById('apartmentRemoveSelect').value
       });
   };
 
@@ -134,6 +154,15 @@
       .withFailureHandler(err=>setStatus('importStatus','Błąd pobierania pracowników: '+err.message,'err'))
       .adminListCompletedEmployees(adminToken);
   };
+
+
+  document.getElementById('employeeSearch').addEventListener('input', e => {
+    const q = (e.target.value || '').toLowerCase();
+    const sel = document.getElementById('employeeSelect');
+    [...sel.options].forEach(o => {
+      o.hidden = q && !o.textContent.toLowerCase().includes(q);
+    });
+  });
 
   document.getElementById('loadEmployeeBtn').onclick = () => {
     if (!requireAdmin()) return;

@@ -69,6 +69,7 @@ function initAll() {
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
   ensureHeader_(registry, ['pesel','name','surname','plant','apartment']);
   ensureHeader_(peselList, ['pesel','plant']);
+  if (peselList.getMaxRows() > 0) peselList.getRange(1,1,peselList.getMaxRows(),1).setNumberFormat('@');
   ensureHeader_(plantList, ['plant']);
   ensureHeader_(apartmentList, ['apartment']);
 
@@ -135,7 +136,7 @@ function syncRegistryToLoginSeed_() {
 /* ======================== LOGIN + FORM ======================== */
 
 function loginByIdentity(identity) {
-  const pesel = safe_(identity.pesel);
+  const pesel = normalizePesel_(identity.pesel);
   if (!/^\d{11}$/.test(pesel)) throw new Error('PESEL musi mieć 11 cyfr.');
 
   const peselVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
@@ -296,7 +297,9 @@ function adminSaveCoreLists(adminToken, payload) {
   const plants = parseMultilineList_(payload && payload.plants);
   const apartments = parseMultilineList_(payload && payload.apartments);
   const selectedPlant = safe_(payload && payload.selectedPlant);
-  const pesels = parseMultilineList_(payload && payload.pesels).filter(v => /^\d{11}$/.test(v));
+  const pesels = parseMultilineList_(payload && payload.pesels)
+    .map(normalizePesel_)
+    .filter(v => /^\d{11}$/.test(v));
 
   // Listy zakładów i mieszkań działają jako słowniki (nadpisanie aktualnym zbiorem wejściowym)
   if (plants.length) writeUniqueColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plants);
@@ -315,16 +318,20 @@ function adminSaveCoreLists(adminToken, payload) {
 function adminRemoveFromLists(adminToken, payload) {
   assertAdmin_(adminToken);
 
-  const peselsToRemove = new Set(parseMultilineList_(payload && payload.pesels));
-  const plantsToRemove = new Set(parseMultilineList_(payload && payload.plants));
-  const apartmentsToRemove = new Set(parseMultilineList_(payload && payload.apartments));
+  const peselKey = safe_(payload && payload.peselKey);
+  const plant = safe_(payload && payload.plant);
+  const apartment = safe_(payload && payload.apartment);
 
-  removePeselsFromSheet_(getSheet_(CFG.PESEL_LIST_SHEET), peselsToRemove);
-  removeFromSingleColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plantsToRemove);
-  removeFromSingleColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartmentsToRemove);
+  if (peselKey) {
+    const [pesel, p] = peselKey.split('|');
+    removePeselAssignment_(getSheet_(CFG.PESEL_LIST_SHEET), safe_(pesel), safe_(p));
+  }
+  if (plant) removeFromSingleColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', new Set([plant]));
+  if (apartment) removeFromSingleColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', new Set([apartment]));
 
   return { ok:true };
 }
+
 
 
 function adminGetCoreLists(adminToken) {
@@ -338,8 +345,32 @@ function adminGetCoreLists(adminToken) {
   const ah = headerMap_(apartmentVals[0] || []);
   const apartments = [...new Set(apartmentVals.slice(1).map(r => safe_(r[ah.apartment])).filter(Boolean))];
 
-  return { plants, apartments };
+  const cVals = getSheet_(CFG.CONTACTS_SHEET).getDataRange().getValues();
+  const ch = headerMap_(cVals[0] || []);
+  const nameByKey = {};
+  for (let i = 1; i < cVals.length; i++) {
+    const pesel = safe_(cVals[i][ch.pesel]);
+    const plant = safe_(cVals[i][ch.plant] || cVals[i][ch.workplace]);
+    if (!pesel || !plant) continue;
+    nameByKey[`${pesel}|${plant}`.toLowerCase()] = `${safe_(cVals[i][ch.surname])} ${safe_(cVals[i][ch.name])}`.trim();
+  }
+
+  const pVals = getSheet_(CFG.PESEL_LIST_SHEET).getDataRange().getValues();
+  const ph = headerMap_(pVals[0] || []);
+  const peselOptions = pVals.slice(1)
+    .map(r => {
+      const pesel = safe_(r[ph.pesel]);
+      const plant = safe_(r[ph.plant]);
+      if (!pesel || !plant) return null;
+      const key = `${pesel}|${plant}`;
+      const fullName = nameByKey[key.toLowerCase()] || 'Brak danych';
+      return { value:key, label:`${fullName} | ${pesel} | ${plant}` };
+    })
+    .filter(Boolean);
+
+  return { plants, apartments, peselOptions };
 }
+
 
 function adminListCompletedEmployees(adminToken) {
   assertAdmin_(adminToken);
@@ -768,6 +799,11 @@ function upsertTextFile_(folder, fileName, content){
 }
 
 function getOrCreateSheet_(ss, name){ return ss.getSheetByName(name) || ss.insertSheet(name); }
+function normalizePesel_(v){
+  const digits = safe_(v).replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.slice(-11).padStart(11, '0');
+}
 function parseMultilineList_(txt){
   return [...new Set(String(txt || '')
     .split(/\r?\n/)
@@ -795,16 +831,28 @@ function upsertPeselsForPlant_(pesels, plant){
 
   let added = 0;
   pesels.forEach(p => {
-    const key = `${safe_(p)}|${safe_(plant)}`.toLowerCase();
+    const np = normalizePesel_(p);
+    if (!/^\d{11}$/.test(np)) return;
+    const key = `${np}|${safe_(plant)}`.toLowerCase();
     if (!existing.has(key)) {
       existing.add(key);
-      out.push([safe_(p), safe_(plant)]);
+      out.push([np, safe_(plant)]);
       added++;
     }
   });
 
   writeSheetData_(sheet, ['pesel','plant'], out);
+  if (sheet.getMaxRows() > 0) sheet.getRange(1,1,sheet.getMaxRows(),1).setNumberFormat('@');
   return added;
+}
+function removePeselAssignment_(sheet, pesel, plant){
+  const vals = sheet.getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+  const kept = vals.slice(1)
+    .filter(r => !(safe_(r[h.pesel]) === pesel && safe_(r[h.plant]).toLowerCase() === plant.toLowerCase()))
+    .map(r => [safe_(r[h.pesel]), safe_(r[h.plant])]);
+  writeSheetData_(sheet, ['pesel','plant'], kept);
+  if (sheet.getMaxRows() > 0) sheet.getRange(1,1,sheet.getMaxRows(),1).setNumberFormat('@');
 }
 function removePeselsFromSheet_(sheet, removeSet){
   const vals = sheet.getDataRange().getValues();
@@ -813,6 +861,7 @@ function removePeselsFromSheet_(sheet, removeSet){
     .filter(r => !removeSet.has(safe_(r[h.pesel])))
     .map(r => [safe_(r[h.pesel]), safe_(r[h.plant])]);
   writeSheetData_(sheet, ['pesel','plant'], kept);
+  if (sheet.getMaxRows() > 0) sheet.getRange(1,1,sheet.getMaxRows(),1).setNumberFormat('@');
 }
 function writeSheetData_(sheet, header, rows){
   sheet.clearContents();
