@@ -9,22 +9,24 @@
   <meta http-equiv="Expires" content="0" />
   <title>Panel pracownika</title>
   <script>
-    // Stabilizacja URL Web App na Androidzie:
-    // - nie używamy intent:// (powodowało błędne adresy),
-    // - jeśli strona została otwarta przez wrapper/parametry Drive, wracamy do canonical URL.
+    // Stabilizacja URL Web App:
+    // - nie używamy intent://,
+    // - nie polegamy na ScriptApp.getService().getUrl() po stronie klienta,
+    // - czyścimy zbędne parametry wrapperów (np. Drive), zachowując ten sam /exec.
     (function normalizeWebAppUrl() {
-      const canonical = '<?= canonicalUrl ?>';
-      if (!canonical) return;
       try {
-        const cur = new URL(window.location.href);
-        const can = new URL(canonical);
-        const hasDriveWrapperParams = ['usp', 'resourcekey', 'id', 'euid'].some(p => cur.searchParams.has(p));
-        const wrongHost = cur.host !== can.host;
-        const wrongPath = cur.pathname !== can.pathname;
-        const wrongPage = (cur.searchParams.get('page') || '') !== (can.searchParams.get('page') || '');
+        const current = new URL(window.location.href);
+        const normalized = new URL(window.location.href);
+        normalized.search = '';
+        const expectedPage = '<?= pageName ?>';
+        if (expectedPage === 'admin') normalized.searchParams.set('page', 'admin');
 
-        if (wrongHost || wrongPath || wrongPage || hasDriveWrapperParams) {
-          window.location.replace(canonical);
+        const samePath = current.origin === normalized.origin && current.pathname === normalized.pathname;
+        const sameQuery = current.search === normalized.search;
+        const hasWrapperParams = ['usp', 'resourcekey', 'id', 'euid', 'pli', 'authuser'].some(p => current.searchParams.has(p));
+
+        if (samePath && (!sameQuery || hasWrapperParams)) {
+          window.location.replace(normalized.toString());
         }
       } catch (_) {}
     })();
