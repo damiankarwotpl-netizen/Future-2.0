@@ -33,8 +33,8 @@
     .hero h1{margin:0 0 6px;font-size:1.65rem;letter-spacing:.2px}
     .hero p{margin:0;color:var(--muted)}
     .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
-    .card:hover{transform:translateY(-1px);transition:.2s ease}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -52,6 +52,10 @@
     .admin-link{display:inline-block;margin-top:8px;color:#4338ca;text-decoration:none;font-weight:700}
     .admin-link:hover{text-decoration:underline}
     .hidden{display:none}
+    .success-screen{position:fixed;inset:0;background:linear-gradient(180deg,#eef2ff,#e0e7ff);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+    .success-card{max-width:620px;width:100%;background:#fff;border:1px solid #c7d2fe;border-radius:22px;padding:30px;text-align:center;box-shadow:0 24px 50px rgba(30,41,90,.2)}
+    .success-title{margin:0 0 10px;font-size:1.6rem;color:#1e1b4b}
+    .success-sub{margin:0;color:#475569}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999}
     .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
     .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
@@ -69,7 +73,7 @@
       <h1 data-i18n="emp_title">Formularz pracownika</h1>
       <p data-i18n="emp_subtitle">Nowoczesny panel do szybkiego uzupełniania danych pracownika.</p>
     </div>
-    <div class="hero-badge" data-i18n="secure_session">Bezpieczna sesja • autozapis</div>
+    <div class="hero-badge" data-i18n="secure_session">Bezpieczna sesja</div>
   </header>
 
   <section class="card">
@@ -118,25 +122,34 @@
     <div id="formStatus" class="status"></div>
   </section>
 </div>
+<section id="successScreen" class="success-screen hidden">
+  <div class="success-card">
+    <h2 class="success-title" id="successTitle">Dziękujemy, dane zostały zapisane prawidłowo.</h2>
+    <p class="success-sub" id="successSub">Za chwilę nastąpi przekierowanie…</p>
+  </div>
+</section>
 
 <script>
   let sessionToken = null;
+  let formLocked = false;
   const I18N = {
     pl: {
       emp_title:'Formularz pracownika', emp_subtitle:'Nowoczesny panel do szybkiego uzupełniania danych pracownika.',
-      secure_session:'Bezpieczna sesja • autozapis', login_title:'Logowanie pracownika', login_sub:'Panel administratora jest dostępny pod osobnym linkiem.',
+      secure_session:'Bezpieczna sesja', login_title:'Logowanie pracownika', login_sub:'Panel administratora jest dostępny pod osobnym linkiem.',
       pesel:'PESEL', login_btn:'Zaloguj', go_admin:'Przejdź do panelu administratora', form_title:'Formularz pracownika',
       form_sub:'Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.', save_form:'Zapisz formularz',
       form_ready:'OK - formularz gotowy do edycji.', login_first:'Najpierw zaloguj się.',
-      autosave_ok:'Autozapis OK', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
+      autosave_ok:'Zapisano.', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
+      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…'
     },
     es: {
       emp_title:'Formulario del trabajador', emp_subtitle:'Panel moderno para completar rápidamente los datos del trabajador.',
-      secure_session:'Sesión segura • autoguardado', login_title:'Inicio de sesión del trabajador', login_sub:'El panel de administrador está disponible en un enlace separado.',
+      secure_session:'Sesión segura', login_title:'Inicio de sesión del trabajador', login_sub:'El panel de administrador está disponible en un enlace separado.',
       pesel:'PESEL', login_btn:'Iniciar sesión', go_admin:'Ir al panel de administrador', form_title:'Formulario del trabajador',
       form_sub:'Después de iniciar sesión con PESEL puedes completar y guardar los datos.', save_form:'Guardar formulario',
       form_ready:'OK - formulario listo para editar.', login_first:'Primero inicia sesión.',
-      autosave_ok:'Autoguardado OK', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
+      autosave_ok:'Guardado.', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
+      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…'
     }
   };
   const AUTO_ES = {
@@ -160,10 +173,28 @@
     document.getElementById('langPL').classList.toggle('active', getLang()==='pl');
     document.getElementById('langES').classList.toggle('active', getLang()==='es');
     document.getElementById('f_phoneNumber').placeholder = getLang()==='es' ? 'p.ej. 600700800' : 'np. 600700800';
+    const intl = document.getElementById('f_intlDrivingLicense');
+    if (intl) {
+      intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
+      intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
+    }
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
 
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
+  function lockFormUi() {
+    formLocked = true;
+    document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea, #employeeFormWrap button, #loginBtn, #loginPesel').forEach(el => {
+      el.disabled = true;
+    });
+  }
+  function showSuccessAndRedirect() {
+    lockFormUi();
+    document.getElementById('successTitle').textContent = t('thanks_saved');
+    document.getElementById('successSub').textContent = t('redirect_in');
+    document.getElementById('successScreen').classList.remove('hidden');
+    setTimeout(() => { window.location.href = 'https://www.google.com'; }, 5000);
+  }
 
 
   function setSelectOptions(selectId, values, fallback) {
@@ -292,7 +323,7 @@
   }
 
   async function saveForm(autoMode = false, includeFiles = false) {
-    if (!sessionToken) return;
+    if (!sessionToken || formLocked) return;
 
     try {
       const payload = await buildPayload(includeFiles);
@@ -301,6 +332,7 @@
           if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
           if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
           setStatus('formStatus', autoMode ? t('autosave_ok') : (res.message || t('saved_ok')), 'ok');
+          if (!autoMode) showSuccessAndRedirect();
         })
         .withFailureHandler(err => setStatus('formStatus', t('save_error') + err.message, 'err'))
         .saveEmployeeForm(payload);
@@ -310,7 +342,7 @@
   }
 
   function scheduleAutoSave() {
-    if (!sessionToken) return;
+    if (!sessionToken || formLocked) return;
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
   }

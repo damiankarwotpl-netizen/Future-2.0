@@ -13,8 +13,8 @@
     .hero h1{margin:0 0 6px;font-size:1.65rem}
     .hero p{margin:0;color:var(--muted)}
     .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
-    .card:hover{transform:translateY(-1px);transition:.2s ease}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -145,6 +145,11 @@
     if (search) search.placeholder = getLang()==='es' ? 'Buscar por nombre, apellido, PESEL...' : 'Szukaj po imieniu, nazwisku, PESEL...';
     const phone = document.getElementById('edit_phoneNumber');
     if (phone) phone.placeholder = getLang()==='es' ? 'p.ej. 600700800' : 'np. 600700800';
+    const intl = document.getElementById('edit_intlDrivingLicense');
+    if (intl) {
+      intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
+      intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
+    }
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
