@@ -114,6 +114,31 @@
 
   <div class="divider"></div>
   <div>
+    <h4 class="section-title">Generuj zamówienie ubrań</h4>
+    <div class="grid">
+      <div><label>Zakład</label><select id="orderPlantSelect"></select></div>
+      <div><label>Dla kogo</label><select id="orderMode"><option value="all">Wszyscy</option><option value="selected">Wybrane osoby</option></select></div>
+      <div class="full">
+        <label>Wybrane osoby</label>
+        <div id="orderPeopleList" style="max-height:180px;overflow:auto;border:1px solid #cbd5e1;border-radius:10px;padding:8px;background:#fff;opacity:.6;pointer-events:none"></div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:8px">
+      <div><label><input type="checkbox" class="orderPart" value="shirt"> Koszulka</label><input id="qty_shirt" type="number" min="1" value="1"></div>
+      <div><label><input type="checkbox" class="orderPart" value="hoodie"> Bluza</label><input id="qty_hoodie" type="number" min="1" value="1"></div>
+      <div><label><input type="checkbox" class="orderPart" value="jacket"> Kurtka</label><input id="qty_jacket" type="number" min="1" value="1"></div>
+      <div><label><input type="checkbox" class="orderPart" value="pants"> Spodnie</label><input id="qty_pants" type="number" min="1" value="1"></div>
+      <div><label><input type="checkbox" class="orderPart" value="shoes"> Buty</label><input id="qty_shoes" type="number" min="1" value="1"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="generateOrderBtn">Generuj zamówienie</button>
+    </div>
+    <div id="orderStatus" class="status"></div>
+    <div id="orderLinks" class="row"></div>
+  </div>
+
+  <div class="divider"></div>
+  <div>
     <h4 class="section-title" data-i18n="stats_title">Statystyki wypełnienia formularza</h4>
     <div class="row">
       <button class="btn secondary" id="refreshStatsBtn" data-i18n="refresh_stats">Odśwież statystyki</button>

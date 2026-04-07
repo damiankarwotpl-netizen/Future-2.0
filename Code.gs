@@ -12,7 +12,8 @@ const CFG = {
   ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
   MAX_UPLOAD_PDF_MB: 8,
-  TEST_LOGIN_BYPASS_PESELS: ['99999999999'] // PESEL testowy - brak blokady po zapisie
+  TEST_LOGIN_BYPASS_PESELS: ['99999999999'], // PESEL testowy - brak blokady po zapisie
+  ADMIN_DEVICE_KEY: 'CHANGE_THIS_TO_PRIVATE_DEVICE_KEY' // klucz urządzenia do otwierania panelu admin
 };
 
 const HEADER_SYNONYMS = {
