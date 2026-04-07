@@ -12,7 +12,8 @@ const CFG = {
   ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
   MAX_UPLOAD_PDF_MB: 8,
-  TEST_LOGIN_BYPASS_PESELS: ['99999999999'] // PESEL testowy - brak blokady po zapisie
+  TEST_LOGIN_BYPASS_PESELS: ['99999999999'], // PESEL testowy - brak blokady po zapisie
+  ADMIN_DEVICE_KEY: 'CHANGE_THIS_TO_PRIVATE_DEVICE_KEY' // klucz urządzenia do otwierania panelu admin
 };
 
 const HEADER_SYNONYMS = {
@@ -35,11 +36,18 @@ const HEADER_SYNONYMS = {
 
 function doGet(e) {
   const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
+  const deviceKey = safe_(e && e.parameter && e.parameter.device);
   const view = page === 'admin' ? 'Admin' : 'Index';
+
+  if (page === 'admin' && deviceKey !== CFG.ADMIN_DEVICE_KEY) {
+    return HtmlService.createHtmlOutput('<h3>404 - Strona nie istnieje</h3>')
+      .setTitle('404')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  }
 
   const tpl = HtmlService.createTemplateFromFile(view);
   tpl.homeUrl = ScriptApp.getService().getUrl();
-  tpl.adminUrl = `${tpl.homeUrl}?page=admin`;
+  tpl.adminUrl = `${tpl.homeUrl}?page=admin&device=${encodeURIComponent(CFG.ADMIN_DEVICE_KEY)}`;
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
