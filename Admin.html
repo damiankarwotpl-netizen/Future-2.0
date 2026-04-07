@@ -267,6 +267,8 @@
 
         setSelectOptions('edit_plant', res.plants);
         setSelectOptions('edit_apartment', res.apartments);
+        setSelectOptions('orderPlantSelect', res.plants);
+        refreshOrderCandidates();
       })
       .withFailureHandler(err=>setStatus('importStatus',t('list_refresh_err')+err.message,'err'))
       .adminGetCoreLists(adminToken);
@@ -308,6 +310,26 @@
   document.getElementById('refreshListsBtn').onclick = () => {
     refreshCoreLists();
   };
+
+  function refreshOrderCandidates() {
+    if (!requireAdmin()) return;
+    const plant = document.getElementById('orderPlantSelect').value;
+    const select = document.getElementById('orderPeopleSelect');
+    select.innerHTML = '';
+    if (!plant) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        rows.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.key;
+          opt.textContent = r.label;
+          select.appendChild(opt);
+        });
+      })
+      .withFailureHandler(err => setStatus('orderStatus', 'Błąd listy osób do zamówienia: ' + err.message, 'err'))
+      .adminGetOrderCandidates(adminToken, plant);
+  }
 
   document.getElementById('removeListsBtn').onclick = () => {
     if (!requireAdmin()) return;
@@ -502,6 +524,37 @@
   }
 
   document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
+  document.getElementById('orderPlantSelect').addEventListener('change', refreshOrderCandidates);
+  document.getElementById('orderMode').addEventListener('change', () => {
+    const show = document.getElementById('orderMode').value === 'selected';
+    document.getElementById('orderPeopleSelect').disabled = !show;
+  });
+  document.getElementById('generateOrderBtn').onclick = () => {
+    if (!requireAdmin()) return;
+    const plant = document.getElementById('orderPlantSelect').value;
+    const mode = document.getElementById('orderMode').value;
+    const selectedKeys = [...document.getElementById('orderPeopleSelect').selectedOptions].map(o => o.value);
+    const parts = [...document.querySelectorAll('.orderPart:checked')].map(el => el.value);
+    const quantities = {
+      shirt: Number(document.getElementById('qty_shirt').value || 1),
+      hoodie: Number(document.getElementById('qty_hoodie').value || 1),
+      jacket: Number(document.getElementById('qty_jacket').value || 1),
+      pants: Number(document.getElementById('qty_pants').value || 1),
+      shoes: Number(document.getElementById('qty_shoes').value || 1)
+    };
+
+    google.script.run
+      .withSuccessHandler(res => {
+        setStatus('orderStatus', `Wygenerowano zamówienie (${res.employees} osób).`, 'ok');
+        const wrap = document.getElementById('orderLinks');
+        wrap.innerHTML = `
+          <a class="link" href="${res.summaryUrl}" target="_blank" rel="noopener">📄 ${res.summaryName}</a>
+          <a class="link" href="${res.issueUrl}" target="_blank" rel="noopener">📄 ${res.issueName}</a>
+        `;
+      })
+      .withFailureHandler(err => setStatus('orderStatus', 'Błąd generowania zamówienia: ' + err.message, 'err'))
+      .adminGenerateOrder(adminToken, { plant, mode, selectedKeys, parts, quantities });
+  };
   document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');

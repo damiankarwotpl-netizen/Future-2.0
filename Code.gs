@@ -408,6 +408,119 @@ function adminGetCoreLists(adminToken) {
   return { plants, apartments, peselOptions };
 }
 
+function adminGetOrderCandidates(adminToken, plant) {
+  assertAdmin_(adminToken);
+  const targetPlant = safe_(plant);
+  if (!targetPlant) return [];
+
+  const cVals = getSheet_(CFG.CLOTHES_SHEET).getDataRange().getValues();
+  const ch = headerMap_(cVals[0] || []);
+  const rows = [];
+  const seen = new Set();
+
+  for (let i = 1; i < cVals.length; i++) {
+    const rowPlant = safe_(cVals[i][ch.plant]);
+    if (rowPlant !== targetPlant) continue;
+    const name = safe_(cVals[i][ch.name]);
+    const surname = safe_(cVals[i][ch.surname]);
+    if (!name && !surname) continue;
+    const key = `${name}|${surname}|${rowPlant}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ key, name, surname, plant: rowPlant, label: `${surname} ${name}`.trim() });
+  }
+
+  return rows.sort((a,b)=>a.label.localeCompare(b.label, 'pl'));
+}
+
+function adminGenerateOrder(adminToken, payload) {
+  assertAdmin_(adminToken);
+  const plant = safe_(payload && payload.plant);
+  const parts = Array.isArray(payload && payload.parts) ? payload.parts.map(safe_).filter(Boolean) : [];
+  const quantities = (payload && payload.quantities) || {};
+  const mode = safe_(payload && payload.mode) || 'all';
+  const selectedKeys = new Set((Array.isArray(payload && payload.selectedKeys) ? payload.selectedKeys : []).map(v => safe_(v).toLowerCase()));
+
+  if (!plant) throw new Error('Wybierz zakład.');
+  if (!parts.length) throw new Error('Wybierz minimum jedną część ubioru.');
+
+  const cVals = getSheet_(CFG.CLOTHES_SHEET).getDataRange().getValues();
+  const ch = headerMap_(cVals[0] || []);
+  const selectedRows = [];
+
+  for (let i = 1; i < cVals.length; i++) {
+    const rowPlant = safe_(cVals[i][ch.plant]);
+    if (rowPlant !== plant) continue;
+    const name = safe_(cVals[i][ch.name]);
+    const surname = safe_(cVals[i][ch.surname]);
+    const key = `${name}|${surname}|${rowPlant}`.toLowerCase();
+    if (mode === 'selected' && !selectedKeys.has(key)) continue;
+    selectedRows.push({
+      name, surname, plant: rowPlant,
+      shirt: safe_(cVals[i][ch.shirt]), hoodie: safe_(cVals[i][ch.hoodie]), pants: safe_(cVals[i][ch.pants]),
+      jacket: safe_(cVals[i][ch.jacket]), shoes: safe_(cVals[i][ch.shoes])
+    });
+  }
+
+  if (!selectedRows.length) throw new Error('Brak pracowników do wygenerowania zamówienia.');
+
+  const partLabel = { shirt:'Koszulka', hoodie:'Bluza', pants:'Spodnie', jacket:'Kurtka', shoes:'Buty' };
+  const summaryMap = {};
+  const issueLines = [];
+
+  selectedRows.forEach(emp => {
+    const perPerson = [];
+    parts.forEach(part => {
+      const size = safe_(emp[part]);
+      if (!size) return;
+      const qty = Math.max(1, Number(quantities[part] || 1));
+      const sumKey = `${part}|${size}`;
+      summaryMap[sumKey] = (summaryMap[sumKey] || 0) + qty;
+      perPerson.push(`${qty} x ${partLabel[part] || part} ${size}`);
+    });
+    if (perPerson.length) issueLines.push(`${emp.surname} ${emp.name}: ${perPerson.join(', ')}`);
+  });
+
+  const tz = Session.getScriptTimeZone() || 'Europe/Warsaw';
+  const stamp = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd_HH-mm');
+  const folder = getOrCreateSubFolder_(getRootFolder_(), 'Zamowienia');
+  const titleBase = `Zamowienie_${sanitizeFilePart_(plant)}_${stamp}`;
+
+  const summaryDoc = DocumentApp.create(`${titleBase}_podsumowanie`);
+  const sb = summaryDoc.getBody();
+  sb.appendParagraph(`Zamówienie - podsumowanie`);
+  sb.appendParagraph(`Zakład: ${plant}`);
+  sb.appendParagraph(`Data: ${stamp}`);
+  sb.appendParagraph(' ');
+  Object.keys(summaryMap).sort().forEach(k => {
+    const [part, size] = k.split('|');
+    sb.appendParagraph(`${summaryMap[k]} x ${partLabel[part] || part} ${size}`);
+  });
+  summaryDoc.saveAndClose();
+
+  const issueDoc = DocumentApp.create(`${titleBase}_wydanie`);
+  const ib = issueDoc.getBody();
+  ib.appendParagraph(`Zamówienie - wydanie dla pracowników`);
+  ib.appendParagraph(`Zakład: ${plant}`);
+  ib.appendParagraph(`Data: ${stamp}`);
+  ib.appendParagraph(' ');
+  issueLines.forEach(line => ib.appendParagraph(line));
+  issueDoc.saveAndClose();
+
+  const summaryPdf = folder.createFile(DriveApp.getFileById(summaryDoc.getId()).getAs(MimeType.PDF)).setName(`${titleBase}_podsumowanie.pdf`);
+  const issuePdf = folder.createFile(DriveApp.getFileById(issueDoc.getId()).getAs(MimeType.PDF)).setName(`${titleBase}_wydanie.pdf`);
+  DriveApp.getFileById(summaryDoc.getId()).setTrashed(true);
+  DriveApp.getFileById(issueDoc.getId()).setTrashed(true);
+
+  return {
+    summaryUrl: summaryPdf.getUrl(),
+    summaryName: summaryPdf.getName(),
+    issueUrl: issuePdf.getUrl(),
+    issueName: issuePdf.getName(),
+    employees: selectedRows.length
+  };
+}
+
 
 function adminListCompletedEmployees(adminToken) {
   assertAdmin_(adminToken);
