@@ -17,12 +17,12 @@
     html{-webkit-text-size-adjust:100%}
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top right,#c7d2fe 0%,transparent 36%),radial-gradient(circle at top left,#e0e7ff 0%,transparent 44%),var(--bg);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
-    .container{max-width:1140px;margin:30px auto;padding:0 16px 32px;position:relative}
+    .container{max-width:1240px;margin:24px auto;padding:0 16px 32px;position:relative}
     .hero{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
     .hero h1{margin:0 0 6px;font-size:1.65rem}
     .hero p{margin:0;color:var(--muted)}
     .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
-    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease;position:relative;overflow:hidden}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px;transition:.2s ease;position:relative;overflow:hidden}
     .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#6366f1,#4338ca)}
     .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
@@ -54,12 +54,16 @@
     .kpi .value{font-size:1.3rem;font-weight:800;color:#1e1b4b}
     .stats-layout{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
     .stats-chart-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px}
-    .card-soft{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    .card-soft{background:linear-gradient(180deg,#f8fafc,#f1f5f9);border:1px solid #dbeafe;border-radius:16px;padding:14px}
     #missingPeselList{margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto}
     .stats-table{margin-top:10px}
     .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
     .plant-link:hover{text-decoration:underline}
     .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
+    #orderPeopleList label{display:flex!important;align-items:center;gap:8px;padding:7px 8px;border-radius:8px}
+    #orderPeopleList label:hover{background:#eef2ff}
+    .orderPart{transform:scale(1.15);margin-right:6px}
+    #orderLinks .link{display:inline-block;padding:10px 12px;border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
     .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
     .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
@@ -129,7 +133,12 @@
       remove_ok:'Usunięto wskazane wartości z list.', remove_err:'Błąd usuwania z list: ', fetch_emp_err:'Błąd pobierania pracowników: ',
       load_emp_err:'Błąd wczytywania pracownika: ', generated_test_db:'Wygenerowano bazę testową: ', generated_workers:' pracowników.',
       gen_test_db_err:'Błąd generowania bazy testowej: ', current_plants:'Aktualna lista zakładów', current_apartments:'Aktualna lista mieszkań',
-      kpi_done:'Wypełnione', kpi_missing:'Brakuje', kpi_all:'Wszystkie osoby', kpi_progress:'Łączny postęp', open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.'
+      kpi_done:'Wypełnione', kpi_missing:'Brakuje', kpi_all:'Wszystkie osoby', kpi_progress:'Łączny postęp', open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.',
+      order_title:'Generuj zamówienie ubrań', order_plant:'Zakład', order_for:'Dla kogo', order_all:'Wszyscy', order_selected:'Wybrane osoby',
+      order_people:'Wybrane osoby', order_generate:'Generuj zamówienie', order_people_err:'Błąd listy osób do zamówienia: ',
+      order_done_prefix:'Wygenerowano zamówienie (', order_done_suffix:' osób).', order_gen_err:'Błąd generowania zamówienia: ',
+      part_shirt:'Koszulka', part_hoodie:'Bluza', part_jacket:'Kurtka', part_pants:'Spodnie', part_shoes:'Buty',
+      th_plant:'Zakład', th_done:'Wypełnione', th_missing:'Brakuje', th_all:'Wszystkie', th_progress:'Postęp'
     },
     es: {
       admin_title:'Panel de administrador', admin_sub:'Gestiona listas, trabajadores y estadísticas en un solo lugar.', admin_mode:'Modo administrador • LIVE',
@@ -150,7 +159,12 @@
       remove_ok:'Se eliminaron los valores seleccionados de las listas.', remove_err:'Error al eliminar de las listas: ', fetch_emp_err:'Error al cargar trabajadores: ',
       load_emp_err:'Error al cargar trabajador: ', generated_test_db:'Base de prueba generada: ', generated_workers:' trabajadores.',
       gen_test_db_err:'Error al generar base de prueba: ', current_plants:'Lista actual de plantas', current_apartments:'Lista actual de viviendas',
-      kpi_done:'Completados', kpi_missing:'Faltan', kpi_all:'Total de personas', kpi_progress:'Progreso total', open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      kpi_done:'Completados', kpi_missing:'Faltan', kpi_all:'Total de personas', kpi_progress:'Progreso total', open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.',
+      order_title:'Generar pedido de ropa', order_plant:'Planta', order_for:'Para quién', order_all:'Todos', order_selected:'Personas seleccionadas',
+      order_people:'Personas seleccionadas', order_generate:'Generar pedido', order_people_err:'Error al cargar personas para el pedido: ',
+      order_done_prefix:'Pedido generado (', order_done_suffix:' personas).', order_gen_err:'Error al generar pedido: ',
+      part_shirt:'Camiseta', part_hoodie:'Sudadera', part_jacket:'Chaqueta', part_pants:'Pantalón', part_shoes:'Zapatos',
+      th_plant:'Planta', th_done:'Completados', th_missing:'Faltan', th_all:'Todos', th_progress:'Progreso'
     }
   };
   const AUTO_ES = {
@@ -186,6 +200,11 @@
     document.querySelectorAll('input[type="date"]').forEach(el => {
       el.lang = getLang()==='es' ? 'es-ES' : 'pl-PL';
     });
+    const orderMode = document.getElementById('orderMode');
+    if (orderMode && orderMode.options.length >= 2) {
+      orderMode.options[0].textContent = t('order_all');
+      orderMode.options[1].textContent = t('order_selected');
+    }
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
   function setStatus(id,msg,cls=''){const e=document.getElementById(id);e.className='status '+cls;e.textContent=msg||'';}
@@ -329,7 +348,7 @@
           list.appendChild(row);
         });
       })
-      .withFailureHandler(err => setStatus('orderStatus', 'Błąd listy osób do zamówienia: ' + err.message, 'err'))
+      .withFailureHandler(err => setStatus('orderStatus', t('order_people_err') + err.message, 'err'))
       .adminGetOrderCandidates(adminToken, plant);
   }
 
@@ -549,14 +568,14 @@
 
     google.script.run
       .withSuccessHandler(res => {
-        setStatus('orderStatus', `Wygenerowano zamówienie (${res.employees} osób).`, 'ok');
+        setStatus('orderStatus', `${t('order_done_prefix')}${res.employees}${t('order_done_suffix')}`, 'ok');
         const wrap = document.getElementById('orderLinks');
         wrap.innerHTML = `
           <a class="link" href="${res.summaryUrl}" target="_blank" rel="noopener">📄 ${res.summaryName}</a>
           <a class="link" href="${res.issueUrl}" target="_blank" rel="noopener">📄 ${res.issueName}</a>
         `;
       })
-      .withFailureHandler(err => setStatus('orderStatus', 'Błąd generowania zamówienia: ' + err.message, 'err'))
+      .withFailureHandler(err => setStatus('orderStatus', t('order_gen_err') + err.message, 'err'))
       .adminGenerateOrder(adminToken, { plant, mode, selectedKeys, parts, quantities });
   };
   document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);

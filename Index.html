@@ -119,7 +119,20 @@
       <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="f_phoneNumber" placeholder="np. 600700800"></div></div>
       <div><label>Email</label><input id="f_email" type="email"></div>
       <div><label>Zakład</label><select id="f_plant"><option>Krakow</option><option>Warszawa</option><option>Wroclaw</option><option>Poznan</option><option>Gdansk</option></select></div>
-      <div><label>Mieszkanie</label><select id="f_apartment"><option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option></select></div>
+      <div>
+        <label>Mieszkanie</label>
+        <select id="f_apartment">
+          <option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option>
+          <option value="__own__" id="f_apartmentOwnOption">Własne mieszkanie</option>
+        </select>
+      </div>
+      <div id="ownApartmentFields" class="full hidden">
+        <div class="grid">
+          <div><label>Miasto</label><input id="f_customCity"></div>
+          <div><label>Kod pocztowy</label><input id="f_customPostalCode"></div>
+          <div class="full"><label>Ulica i numer domu/mieszkania</label><input id="f_customStreetAddress"></div>
+        </div>
+      </div>
       <div><label>Numer konta bankowego</label><input id="f_bankAccount"></div>
       <div><label>Data urodzenia</label><input id="f_birthDate" type="date"></div>
       <div><label>Numer paszportu</label><input id="f_passportNumber"></div>
@@ -196,7 +209,8 @@
     'Czy posiadasz prawo jazdy międzynarodowe?':'¿Tienes licencia de conducir internacional?',
     'Data ważności prawa jazdy':'Fecha de vencimiento de la licencia','Zdjęcie prawa jazdy':'Foto de la licencia',
     'Rozmiary ubrań':'Tallas de ropa','Koszulka':'Camiseta','Bluza':'Sudadera','Kurtka':'Chaqueta','Spodnie':'Pantalón',
-    'Buty':'Zapatos','Notatki':'Notas','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)'
+    'Buty':'Zapatos','Notatki':'Notas','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)','Dołącz skany dokumentów':'Adjunta escaneos de documentos',
+    'Własne mieszkanie':'Vivienda propia','Miasto':'Ciudad','Kod pocztowy':'Código postal','Ulica i numer domu/mieszkania':'Calle y número de casa/apartamento'
   };
   function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
   function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
@@ -218,6 +232,8 @@
     document.querySelectorAll('input[type="date"]').forEach(el => {
       el.lang = getLang()==='es' ? 'es-ES' : 'pl-PL';
     });
+    const ownOption = document.getElementById('f_apartmentOwnOption');
+    if (ownOption) ownOption.textContent = getLang()==='es' ? 'Vivienda propia' : 'Własne mieszkanie';
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
 
@@ -267,6 +283,13 @@
       o.textContent = v;
       el.appendChild(o);
     });
+    if (selectId === 'f_apartment') {
+      const own = document.createElement('option');
+      own.value = '__own__';
+      own.id = 'f_apartmentOwnOption';
+      own.textContent = getLang()==='es' ? 'Vivienda propia' : 'Własne mieszkanie';
+      el.appendChild(own);
+    }
     if (fallback) el.value = fallback;
   }
 
@@ -277,6 +300,13 @@
     document.getElementById('f_intlDrivingLicenseExpiry').required = show;
     document.getElementById('f_drivingLicensePhoto').required = show;
   }
+  function setApartmentVisibility() {
+    const isOwn = document.getElementById('f_apartment').value === '__own__';
+    document.getElementById('ownApartmentFields').classList.toggle('hidden', !isOwn);
+    document.getElementById('f_customCity').required = isOwn;
+    document.getElementById('f_customPostalCode').required = isOwn;
+    document.getElementById('f_customStreetAddress').required = isOwn;
+  }
 
   function markRequiredFields() {
     document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
@@ -284,6 +314,7 @@
       el.required = true;
     });
     setIntlDrivingVisibility();
+    setApartmentVisibility();
   }
 
   function validateEmployeeForm() {
@@ -307,6 +338,9 @@
     setSelectOptions('f_apartment', employee.apartmentOptions, employee.apartment || 'Mieszkanie 1');
     document.getElementById('f_plant').value = employee.plant || document.getElementById('f_plant').value;
     document.getElementById('f_apartment').value = employee.apartment || document.getElementById('f_apartment').value;
+    if (employee.customCity || employee.customPostalCode || employee.customStreetAddress) {
+      document.getElementById('f_apartment').value = '__own__';
+    }
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
     document.getElementById('f_bankAccount').value = employee.bankAccount || '';
@@ -323,7 +357,11 @@
     document.getElementById('f_jacket').value = employee.jacket || 'm';
     document.getElementById('f_shoes').value = employee.shoes || '40';
     document.getElementById('f_notes').value = employee.notes || '';
+    document.getElementById('f_customCity').value = employee.customCity || '';
+    document.getElementById('f_customPostalCode').value = employee.customPostalCode || '';
+    document.getElementById('f_customStreetAddress').value = employee.customStreetAddress || '';
     setIntlDrivingVisibility();
+    setApartmentVisibility();
   }
 
   function readFileAsBase64(file){
@@ -339,6 +377,7 @@
   }
 
   document.getElementById('f_intlDrivingLicense').onchange = setIntlDrivingVisibility;
+  document.getElementById('f_apartment').onchange = setApartmentVisibility;
 
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
@@ -368,6 +407,9 @@
       phonePrefix: document.getElementById('f_phonePrefix').value,
       phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
       apartment: document.getElementById('f_apartment').value,
+      customCity: document.getElementById('f_customCity').value.trim(),
+      customPostalCode: document.getElementById('f_customPostalCode').value.trim(),
+      customStreetAddress: document.getElementById('f_customStreetAddress').value.trim(),
       hireDate: '',
       bankAccount: document.getElementById('f_bankAccount').value.trim(),
       birthDate: document.getElementById('f_birthDate').value,
@@ -465,6 +507,7 @@
 
   applyI18n();
   markRequiredFields();
+  setApartmentVisibility();
   if (!(window.google && google.script && google.script.run)) {
     setStatus('loginStatus', t('open_in_chrome'), 'err');
   }

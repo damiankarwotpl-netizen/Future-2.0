@@ -84,7 +84,7 @@ function initAll() {
   const apartmentList = getOrCreateSheet_(ss, CFG.APARTMENT_LIST_SHEET);
 
   ensureHeader_(loginSeed, ['name','surname','pesel','plant']);
-  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry']);
+  ensureHeader_(contacts, ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','customCity','customPostalCode','customStreetAddress']);
   ensureHeader_(clothes, ['name','surname','plant','shirt','hoodie','pants','jacket','shoes']);
   ensureHeader_(submissions, ['name','surname','pesel','plant','submittedAt']);
   ensureHeader_(registry, ['pesel','name','surname','plant','apartment']);
@@ -113,9 +113,9 @@ function syncSeedToCoreTables_() {
     if (!name || !surname || !pesel || !plant) continue;
 
     upsertByKey_(contacts,
-      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
+      ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','customCity','customPostalCode','customStreetAddress'],
       ['name','surname','pesel','plant'],
-      { name, surname, pesel, plant, email:'', phone:'', workplace:plant, apartment:'', hireDate:'', clothesSize:'', shoesSize:'', notes:'' }
+      { name, surname, pesel, plant, email:'', phone:'', workplace:plant, apartment:'', hireDate:'', clothesSize:'', shoesSize:'', notes:'', customCity:'', customPostalCode:'', customStreetAddress:'' }
     );
 
     upsertByKey_(clothes,
@@ -200,6 +200,7 @@ function loginByIdentity(identity) {
       email:'', phone:'', apartment:'', hireDate:'', notes:'',
       bankAccount:'', birthDate:'', passportNumber:'', passportExpiry:'',
       arrivalDate:'', firstWorkDate:'', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:'',
+      customCity:'', customPostalCode:'', customStreetAddress:'',
       shirt:'m', hoodie:'m', pants:'50', jacket:'m', shoes:'40',
       phonePrefix:'+48', phoneNumber:'',
       plantOptions, apartmentOptions
@@ -220,14 +221,14 @@ function saveEmployeeForm(payload) {
   if (!['+48', '+57'].includes(phonePrefix)) throw new Error('Kierunkowy: +48 albo +57');
 
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
-    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
+    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','customCity','customPostalCode','customStreetAddress'],
     ['name','surname','pesel','plant'],
     {
       name, surname, pesel, plant,
       email: safe_(payload.email),
       phone: `${phonePrefix} ${safe_(payload.phoneNumber)}`.trim(),
       workplace: plant,
-      apartment: safe_(payload.apartment),
+      apartment: safe_(payload.apartment) === '__own__' ? 'Własne mieszkanie' : safe_(payload.apartment),
       hireDate: safe_(payload.hireDate),
       clothesSize: '',
       shoesSize: safe_(payload.shoes),
@@ -239,7 +240,10 @@ function saveEmployeeForm(payload) {
       arrivalDate: safe_(payload.arrivalDate),
       firstWorkDate: safe_(payload.firstWorkDate),
       intlDrivingLicense: safe_(payload.intlDrivingLicense),
-      intlDrivingLicenseExpiry: safe_(payload.intlDrivingLicenseExpiry)
+      intlDrivingLicenseExpiry: safe_(payload.intlDrivingLicenseExpiry),
+      customCity: safe_(payload.customCity),
+      customPostalCode: safe_(payload.customPostalCode),
+      customStreetAddress: safe_(payload.customStreetAddress)
     }
   );
 
@@ -267,7 +271,10 @@ function saveEmployeeForm(payload) {
       name,surname,pesel,plant,
       email:safe_(payload.email),
       phone:`${phonePrefix} ${safe_(payload.phoneNumber)}`.trim(),
-      apartment:safe_(payload.apartment),
+      apartment:safe_(payload.apartment) === '__own__' ? 'Własne mieszkanie' : safe_(payload.apartment),
+      customCity:safe_(payload.customCity),
+      customPostalCode:safe_(payload.customPostalCode),
+      customStreetAddress:safe_(payload.customStreetAddress),
       hireDate:safe_(payload.hireDate),
       bankAccount:safe_(payload.bankAccount),
       birthDate:safe_(payload.birthDate),
@@ -561,6 +568,7 @@ function adminGetEmployeeForEdit(adminToken, pesel, plant) {
         bankAccount: safe_(cVals[i][ch.bankAccount]), birthDate: safe_(cVals[i][ch.birthDate]),
         passportNumber: safe_(cVals[i][ch.passportNumber]), passportExpiry: safe_(cVals[i][ch.passportExpiry]),
         arrivalDate: safe_(cVals[i][ch.arrivalDate]), firstWorkDate: safe_(cVals[i][ch.firstWorkDate]),
+        customCity: safe_(cVals[i][ch.customCity]), customPostalCode: safe_(cVals[i][ch.customPostalCode]), customStreetAddress: safe_(cVals[i][ch.customStreetAddress]),
         intlDrivingLicense: safe_(cVals[i][ch.intlDrivingLicense]), intlDrivingLicenseExpiry: safe_(cVals[i][ch.intlDrivingLicenseExpiry])
       };
       break;
@@ -591,7 +599,7 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
   }
 
   upsertByKey_(getSheet_(CFG.CONTACTS_SHEET),
-    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'],
+    ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','customCity','customPostalCode','customStreetAddress'],
     ['name','surname','pesel','plant'],
     {
       name, surname, pesel, plant,
@@ -599,7 +607,8 @@ function adminSaveEmployeeByAdmin(adminToken, payload) {
       hireDate:safe_(payload.hireDate), clothesSize:'', shoesSize:safe_(payload.shoes), notes:safe_(payload.notes),
       bankAccount:safe_(payload.bankAccount), birthDate:safe_(payload.birthDate), passportNumber:safe_(payload.passportNumber),
       passportExpiry:safe_(payload.passportExpiry), arrivalDate:safe_(payload.arrivalDate), firstWorkDate:safe_(payload.firstWorkDate),
-      intlDrivingLicense:safe_(payload.intlDrivingLicense), intlDrivingLicenseExpiry:safe_(payload.intlDrivingLicenseExpiry)
+      intlDrivingLicense:safe_(payload.intlDrivingLicense), intlDrivingLicenseExpiry:safe_(payload.intlDrivingLicenseExpiry),
+      customCity:safe_(payload.customCity), customPostalCode:safe_(payload.customPostalCode), customStreetAddress:safe_(payload.customStreetAddress)
     }
   );
 
@@ -697,7 +706,7 @@ function adminGenerateTestDatabase(adminToken) {
   const registry = getSheet_(CFG.REGISTRY_SHEET);
 
   const loginSeedHeader = ['name','surname','pesel','plant'];
-  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry'];
+  const contactsHeader = ['name','surname','email','pesel','phone','workplace','apartment','plant','hireDate','clothesSize','shoesSize','notes','bankAccount','birthDate','passportNumber','passportExpiry','arrivalDate','firstWorkDate','intlDrivingLicense','intlDrivingLicenseExpiry','customCity','customPostalCode','customStreetAddress'];
   const clothesHeader = ['name','surname','plant','shirt','hoodie','pants','jacket','shoes'];
   const submissionsHeader = ['name','surname','pesel','plant','submittedAt'];
   const registryHeader = ['pesel','name','surname','plant','apartment'];
@@ -706,19 +715,19 @@ function adminGenerateTestDatabase(adminToken) {
     {
       name:'Jan', surname:'Kowalski', pesel:'90010112345', plant:'Krakow',
       email:'jan.kowalski@example.com', phone:'+48 600700800', workplace:'Krakow', apartment:'ul. Testowa 1/2',
-      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1', bankAccount:'11 2222 3333 4444 5555 6666 7777', birthDate:'1990-01-01', passportNumber:'PA1234567', passportExpiry:'2030-12-31', arrivalDate:'2021-04-10', firstWorkDate:'2021-04-20', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2028-05-30',
+      hireDate:'2024-01-15', clothesSize:'L', shoesSize:'43', notes:'Test 1', bankAccount:'11 2222 3333 4444 5555 6666 7777', birthDate:'1990-01-01', passportNumber:'PA1234567', passportExpiry:'2030-12-31', arrivalDate:'2021-04-10', firstWorkDate:'2021-04-20', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2028-05-30', customCity:'', customPostalCode:'', customStreetAddress:'',
       shirt:'L', hoodie:'L', pants:'M', jacket:'L', shoes:'43'
     },
     {
       name:'Anna', surname:'Nowak', pesel:'92020254321', plant:'Warszawa',
       email:'anna.nowak@example.com', phone:'+48 601602603', workplace:'Warszawa', apartment:'ul. Próbna 5/8',
-      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2', bankAccount:'22 3333 4444 5555 6666 7777 8888', birthDate:'1992-02-02', passportNumber:'PB7654321', passportExpiry:'2029-09-15', arrivalDate:'2022-06-01', firstWorkDate:'2022-06-15', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:'',
+      hireDate:'2023-11-10', clothesSize:'M', shoesSize:'39', notes:'Test 2', bankAccount:'22 3333 4444 5555 6666 7777 8888', birthDate:'1992-02-02', passportNumber:'PB7654321', passportExpiry:'2029-09-15', arrivalDate:'2022-06-01', firstWorkDate:'2022-06-15', intlDrivingLicense:'nie', intlDrivingLicenseExpiry:'', customCity:'', customPostalCode:'', customStreetAddress:'',
       shirt:'M', hoodie:'M', pants:'S', jacket:'M', shoes:'39'
     },
     {
       name:'Carlos', surname:'Gomez', pesel:'85030311111', plant:'Wroclaw',
       email:'carlos.gomez@example.com', phone:'+57 3201234567', workplace:'Wroclaw', apartment:'Calle 10 #5-20',
-      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3', bankAccount:'33 4444 5555 6666 7777 8888 9999', birthDate:'1985-03-03', passportNumber:'PC1112223', passportExpiry:'2028-08-08', arrivalDate:'2020-01-12', firstWorkDate:'2020-02-01', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2027-01-10',
+      hireDate:'2022-09-01', clothesSize:'XL', shoesSize:'44', notes:'Test 3', bankAccount:'33 4444 5555 6666 7777 8888 9999', birthDate:'1985-03-03', passportNumber:'PC1112223', passportExpiry:'2028-08-08', arrivalDate:'2020-01-12', firstWorkDate:'2020-02-01', intlDrivingLicense:'tak', intlDrivingLicenseExpiry:'2027-01-10', customCity:'', customPostalCode:'', customStreetAddress:'',
       shirt:'XL', hoodie:'XL', pants:'L', jacket:'XL', shoes:'44'
     }
   ];
@@ -726,7 +735,7 @@ function adminGenerateTestDatabase(adminToken) {
   writeSheetData_(loginSeed, loginSeedHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant]));
   writeSheetData_(contacts, contactsHeader, employees.map(e => [
     e.name, e.surname, e.email, e.pesel, e.phone, e.workplace, e.apartment, e.plant, e.hireDate, e.clothesSize, e.shoesSize, e.notes,
-    e.bankAccount, e.birthDate, e.passportNumber, e.passportExpiry, e.arrivalDate, e.firstWorkDate, e.intlDrivingLicense, e.intlDrivingLicenseExpiry
+    e.bankAccount, e.birthDate, e.passportNumber, e.passportExpiry, e.arrivalDate, e.firstWorkDate, e.intlDrivingLicense, e.intlDrivingLicenseExpiry, e.customCity, e.customPostalCode, e.customStreetAddress
   ]));
   writeSheetData_(clothes, clothesHeader, employees.map(e => [e.name, e.surname, e.plant, e.shirt, e.hoodie, e.pants, e.jacket, e.shoes]));
   writeSheetData_(submissions, submissionsHeader, employees.map(e => [e.name, e.surname, e.pesel, e.plant, new Date().toISOString()]));
