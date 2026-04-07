@@ -101,7 +101,7 @@
     <h3 class="section-title" data-i18n="login_title">Logowanie pracownika</h3>
     <p class="section-sub" data-i18n="login_sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
-      <div class="full"><label data-i18n="pesel">PESEL</label><input id="loginPesel" maxlength="11"></div>
+      <div class="full"><label data-i18n="pesel">PESEL</label><input id="loginPesel" maxlength="11" required></div>
     </div>
     <div class="row"><button class="btn" id="loginBtn" data-i18n="login_btn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
@@ -137,7 +137,7 @@
       <div><label>Buty</label><select id="f_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
 
       <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
-      <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
+      <div class="full"><label>Dołącz skany dokumentów</label><input id="f_attachment" type="file" accept="application/pdf,image/*" required></div>
     </div>
     <div class="row"><button class="btn" id="saveFormBtn" data-i18n="save_form">Zapisz formularz</button></div>
     <div id="formStatus" class="status"></div>
@@ -235,6 +235,28 @@
     const show = document.getElementById('f_intlDrivingLicense').value === 'tak';
     document.getElementById('intlDrivingExpiryWrap').classList.toggle('hidden', !show);
     document.getElementById('intlDrivingPhotoWrap').classList.toggle('hidden', !show);
+    document.getElementById('f_intlDrivingLicenseExpiry').required = show;
+    document.getElementById('f_drivingLicensePhoto').required = show;
+  }
+
+  function markRequiredFields() {
+    document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
+      if (el.id === 'f_pesel') return; // readonly
+      el.required = true;
+    });
+    setIntlDrivingVisibility();
+  }
+
+  function validateEmployeeForm() {
+    const fields = document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea');
+    for (const field of fields) {
+      if (field.disabled) continue;
+      if (typeof field.checkValidity === 'function' && !field.checkValidity()) {
+        if (typeof field.reportValidity === 'function') field.reportValidity();
+        return false;
+      }
+    }
+    return true;
   }
 
   function fillEmployeeForm(employee){
@@ -370,11 +392,15 @@
 
   document.getElementById('saveFormBtn').onclick = async () => {
     if (!sessionToken) return setStatus('formStatus',t('login_first'),'err');
+    if (!validateEmployeeForm()) {
+      return setStatus('formStatus', 'Uzupełnij wszystkie wymagane pola.', 'err');
+    }
     await saveForm(false, true);
   };
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');
   applyI18n();
+  markRequiredFields();
   if (!(window.google && google.script && google.script.run)) {
     setStatus('loginStatus', getLang()==='es'
       ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
