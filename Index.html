@@ -3,22 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <base target="_top">
+  <base target="_self">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Panel pracownika</title>
   <script>
-    (function forceChromeOnAndroid(){
-      const ua = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(ua);
-      const isChrome = /Chrome/i.test(ua);
-      const alreadyIntent = location.href.startsWith('intent://');
-      if (isAndroid && !isChrome && !alreadyIntent) {
-        const target = location.href.replace(/^https:\/\//, '');
-        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
-      }
-    })();
+    // Globalnie pod telefony: brak automatycznych redirectów i brak przepisywania URL.
+    // Pozwalamy przeglądarce/OS otworzyć dokładnie ten adres, który użytkownik uruchomił.
   </script>
   <style>
     :root{
@@ -33,6 +25,7 @@
       --err:#b91c1c;
       --shadow:0 14px 36px rgba(30,41,90,.12);
     }
+    html{-webkit-text-size-adjust:100%}
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -43,6 +36,7 @@
         radial-gradient(circle at top left, #e0e7ff 0%, transparent 44%),
         var(--bg);
       min-height:100vh;
+      padding-bottom:env(safe-area-inset-bottom);
     }
     .container{max-width:1140px;margin:30px auto;padding:0 16px 32px;position:relative}
     .hero{margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -57,12 +51,12 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease;font-size:16px}
     input:hover,select:hover,textarea:hover{border-color:#94a3b8}
     input:focus,select:focus,textarea:focus{outline:none;border-color:#8da2fb;box-shadow:0 0 0 3px #e0e7ff}
     textarea{min-height:90px}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.26)}
+    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.26);min-height:44px}
     .btn:hover{filter:brightness(1.03)}
     .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
     .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}
@@ -75,10 +69,20 @@
     .success-card{max-width:620px;width:100%;background:#fff;border:1px solid #c7d2fe;border-radius:22px;padding:30px;text-align:center;box-shadow:0 24px 50px rgba(30,41,90,.2)}
     .success-title{margin:0 0 10px;font-size:1.6rem;color:#1e1b4b}
     .success-sub{margin:0;color:#475569}
+    .progress-wrap{margin-top:14px;height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+    .progress-bar{height:100%;width:0;background:linear-gradient(90deg,#6366f1,#22c55e);transition:width .35s ease}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
     .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
     .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
+    @media(max-width:640px){
+      .container{margin:12px auto;padding:0 10px 18px}
+      .hero h1{font-size:1.28rem}
+      .hero p{font-size:.92rem}
+      .card{padding:14px;border-radius:16px}
+      .status{width:100%;display:block}
+      .row{gap:10px}
+    }
   </style>
 </head>
 <body>
@@ -99,11 +103,11 @@
     <h3 class="section-title" data-i18n="login_title">Logowanie pracownika</h3>
     <p class="section-sub" data-i18n="login_sub">Panel administratora jest dostępny pod osobnym linkiem.</p>
     <div class="grid">
-      <div class="full"><label data-i18n="pesel">PESEL</label><input id="loginPesel" maxlength="11"></div>
+      <div class="full"><label data-i18n="pesel">PESEL</label><input id="loginPesel" maxlength="11" required></div>
     </div>
     <div class="row"><button class="btn" id="loginBtn" data-i18n="login_btn">Zaloguj</button></div>
     <div id="loginStatus" class="status"></div>
-    <a class="admin-link" href="<?= adminUrl ?>" target="_top" rel="noopener" data-i18n="go_admin">Przejdź do panelu administratora</a>
+    <a class="admin-link" href="<?= adminUrl ?>" target="_blank" rel="noopener noreferrer" data-i18n="go_admin">Przejdź do panelu administratora</a>
   </section>
 
   <section class="card hidden" id="employeeFormWrap">
@@ -115,7 +119,20 @@
       <div><label>Telefon (z WhatsApp)</label><div class="grid" style="grid-template-columns:130px 1fr;gap:8px"><select id="f_phonePrefix"><option value="+48">+48</option><option value="+57">+57</option></select><input id="f_phoneNumber" placeholder="np. 600700800"></div></div>
       <div><label>Email</label><input id="f_email" type="email"></div>
       <div><label>Zakład</label><select id="f_plant"><option>Krakow</option><option>Warszawa</option><option>Wroclaw</option><option>Poznan</option><option>Gdansk</option></select></div>
-      <div><label>Mieszkanie</label><select id="f_apartment"><option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option></select></div>
+      <div>
+        <label>Mieszkanie</label>
+        <select id="f_apartment">
+          <option>Mieszkanie 1</option><option>Mieszkanie 2</option><option>Mieszkanie 3</option><option>Mieszkanie 4</option><option>Mieszkanie 5</option>
+          <option value="__own__" id="f_apartmentOwnOption">Własne mieszkanie</option>
+        </select>
+      </div>
+      <div id="ownApartmentFields" class="full hidden">
+        <div class="grid">
+          <div><label>Miasto</label><input id="f_customCity"></div>
+          <div><label>Kod pocztowy</label><input id="f_customPostalCode"></div>
+          <div class="full"><label>Ulica i numer domu/mieszkania</label><input id="f_customStreetAddress"></div>
+        </div>
+      </div>
       <div><label>Numer konta bankowego</label><input id="f_bankAccount"></div>
       <div><label>Data urodzenia</label><input id="f_birthDate" type="date"></div>
       <div><label>Numer paszportu</label><input id="f_passportNumber"></div>
@@ -134,13 +151,19 @@
       <div><label>Spodnie</label><select id="f_pants"><option>46</option><option>48</option><option>50</option><option>52</option><option>54</option><option>56</option><option>58</option><option>60</option><option>62</option></select></div>
       <div><label>Buty</label><select id="f_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
 
-      <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
-      <div class="full"><label>Załącznik PDF (opcjonalnie)</label><input id="f_attachment" type="file" accept="application/pdf"></div>
+      <div class="full"><label>Dołącz skany dokumentów</label><input id="f_attachment" type="file" accept="application/pdf,image/*" required></div>
     </div>
     <div class="row"><button class="btn" id="saveFormBtn" data-i18n="save_form">Zapisz formularz</button></div>
     <div id="formStatus" class="status"></div>
   </section>
 </div>
+<section id="savingScreen" class="success-screen hidden">
+  <div class="success-card">
+    <h2 class="success-title" id="savingTitle">Trwa zapisywanie formularza…</h2>
+    <p class="success-sub" id="savingSub">Proszę czekać, nie zamykaj okna.</p>
+    <div class="progress-wrap"><div class="progress-bar" id="savingProgressBar"></div></div>
+  </div>
+</section>
 <section id="successScreen" class="success-screen hidden">
   <div class="success-card">
     <h2 class="success-title" id="successTitle">Dziękujemy, dane zostały zapisane prawidłowo.</h2>
@@ -159,7 +182,10 @@
       form_sub:'Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.', save_form:'Zapisz formularz',
       form_ready:'OK - formularz gotowy do edycji.', login_first:'Najpierw zaloguj się.',
       autosave_ok:'Zapisano.', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
-      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…'
+      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…',
+      required_fields:'Uzupełnij wszystkie wymagane pola.', file_read_error:'Nie udało się odczytać pliku.',
+      open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.',
+      saving_title:'Trwa zapisywanie formularza…', saving_sub:'Proszę czekać, nie zamykaj okna.'
     },
     es: {
       emp_title:'Formulario del trabajador', emp_subtitle:'Panel moderno para completar rápidamente los datos del trabajador.',
@@ -168,7 +194,10 @@
       form_sub:'Después de iniciar sesión con PESEL puedes completar y guardar los datos.', save_form:'Guardar formulario',
       form_ready:'OK - formulario listo para editar.', login_first:'Primero inicia sesión.',
       autosave_ok:'Guardado.', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
-      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…'
+      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…',
+      required_fields:'Completa todos los campos obligatorios.', file_read_error:'No se pudo leer el archivo.',
+      open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.',
+      saving_title:'Guardando formulario…', saving_sub:'Espera por favor, no cierres la ventana.'
     }
   };
   const AUTO_ES = {
@@ -179,11 +208,13 @@
     'Czy posiadasz prawo jazdy międzynarodowe?':'¿Tienes licencia de conducir internacional?',
     'Data ważności prawa jazdy':'Fecha de vencimiento de la licencia','Zdjęcie prawa jazdy':'Foto de la licencia',
     'Rozmiary ubrań':'Tallas de ropa','Koszulka':'Camiseta','Bluza':'Sudadera','Kurtka':'Chaqueta','Spodnie':'Pantalón',
-    'Buty':'Zapatos','Notatki':'Notas','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)'
+    'Buty':'Zapatos','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)','Dołącz skany dokumentów':'Adjunta escaneos de documentos',
+    'Własne mieszkanie':'Vivienda propia','Miasto':'Ciudad','Kod pocztowy':'Código postal','Ulica i numer domu/mieszkania':'Calle y número de casa/apartamento'
   };
   function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
   function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
   function applyI18n(){
+    document.documentElement.lang = getLang()==='es' ? 'es' : 'pl';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('label, h4.section-title').forEach(el => {
       if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
@@ -197,6 +228,11 @@
       intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
       intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
     }
+    document.querySelectorAll('input[type="date"]').forEach(el => {
+      el.lang = getLang()==='es' ? 'es-ES' : 'pl-PL';
+    });
+    const ownOption = document.getElementById('f_apartmentOwnOption');
+    if (ownOption) ownOption.textContent = getLang()==='es' ? 'Vivienda propia' : 'Własne mieszkanie';
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
 
@@ -214,6 +250,26 @@
     document.getElementById('successScreen').classList.remove('hidden');
     setTimeout(() => { window.location.href = 'https://www.google.com'; }, 5000);
   }
+  let savingAnim = null;
+  function showSavingScreen(){
+    const bar = document.getElementById('savingProgressBar');
+    document.getElementById('savingTitle').textContent = t('saving_title');
+    document.getElementById('savingSub').textContent = t('saving_sub');
+    document.getElementById('savingScreen').classList.remove('hidden');
+    let width = 12;
+    bar.style.width = `${width}%`;
+    if (savingAnim) clearInterval(savingAnim);
+    savingAnim = setInterval(() => {
+      width = Math.min(92, width + Math.random() * 10);
+      bar.style.width = `${width}%`;
+    }, 280);
+  }
+  function hideSavingScreen(){
+    if (savingAnim) clearInterval(savingAnim);
+    savingAnim = null;
+    document.getElementById('savingScreen').classList.add('hidden');
+    document.getElementById('savingProgressBar').style.width = '0%';
+  }
 
 
   function setSelectOptions(selectId, values, fallback) {
@@ -226,6 +282,13 @@
       o.textContent = v;
       el.appendChild(o);
     });
+    if (selectId === 'f_apartment') {
+      const own = document.createElement('option');
+      own.value = '__own__';
+      own.id = 'f_apartmentOwnOption';
+      own.textContent = getLang()==='es' ? 'Vivienda propia' : 'Własne mieszkanie';
+      el.appendChild(own);
+    }
     if (fallback) el.value = fallback;
   }
 
@@ -233,6 +296,36 @@
     const show = document.getElementById('f_intlDrivingLicense').value === 'tak';
     document.getElementById('intlDrivingExpiryWrap').classList.toggle('hidden', !show);
     document.getElementById('intlDrivingPhotoWrap').classList.toggle('hidden', !show);
+    document.getElementById('f_intlDrivingLicenseExpiry').required = show;
+    document.getElementById('f_drivingLicensePhoto').required = show;
+  }
+  function setApartmentVisibility() {
+    const isOwn = document.getElementById('f_apartment').value === '__own__';
+    document.getElementById('ownApartmentFields').classList.toggle('hidden', !isOwn);
+    document.getElementById('f_customCity').required = isOwn;
+    document.getElementById('f_customPostalCode').required = isOwn;
+    document.getElementById('f_customStreetAddress').required = isOwn;
+  }
+
+  function markRequiredFields() {
+    document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
+      if (el.id === 'f_pesel') return; // readonly
+      el.required = true;
+    });
+    setIntlDrivingVisibility();
+    setApartmentVisibility();
+  }
+
+  function validateEmployeeForm() {
+    const fields = document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea');
+    for (const field of fields) {
+      if (field.disabled) continue;
+      if (typeof field.checkValidity === 'function' && !field.checkValidity()) {
+        if (typeof field.reportValidity === 'function') field.reportValidity();
+        return false;
+      }
+    }
+    return true;
   }
 
   function fillEmployeeForm(employee){
@@ -244,6 +337,9 @@
     setSelectOptions('f_apartment', employee.apartmentOptions, employee.apartment || 'Mieszkanie 1');
     document.getElementById('f_plant').value = employee.plant || document.getElementById('f_plant').value;
     document.getElementById('f_apartment').value = employee.apartment || document.getElementById('f_apartment').value;
+    if (employee.customCity || employee.customPostalCode || employee.customStreetAddress) {
+      document.getElementById('f_apartment').value = '__own__';
+    }
     document.getElementById('f_phonePrefix').value = employee.phonePrefix || '+48';
     document.getElementById('f_phoneNumber').value = employee.phoneNumber || '';
     document.getElementById('f_bankAccount').value = employee.bankAccount || '';
@@ -259,8 +355,11 @@
     document.getElementById('f_pants').value = employee.pants || '50';
     document.getElementById('f_jacket').value = employee.jacket || 'm';
     document.getElementById('f_shoes').value = employee.shoes || '40';
-    document.getElementById('f_notes').value = employee.notes || '';
+    document.getElementById('f_customCity').value = employee.customCity || '';
+    document.getElementById('f_customPostalCode').value = employee.customPostalCode || '';
+    document.getElementById('f_customStreetAddress').value = employee.customStreetAddress || '';
     setIntlDrivingVisibility();
+    setApartmentVisibility();
   }
 
   function readFileAsBase64(file){
@@ -270,12 +369,13 @@
         const out = String(reader.result || '');
         resolve(out.includes(',') ? out.split(',')[1] : out);
       };
-      reader.onerror = () => reject(new Error('Nie udało się odczytać pliku.'));
+      reader.onerror = () => reject(new Error(t('file_read_error')));
       reader.readAsDataURL(file);
     });
   }
 
   document.getElementById('f_intlDrivingLicense').onchange = setIntlDrivingVisibility;
+  document.getElementById('f_apartment').onchange = setApartmentVisibility;
 
   document.getElementById('loginBtn').onclick = () => {
     google.script.run
@@ -292,7 +392,6 @@
       });
   };
 
-  let autoSaveTimer = null;
   let lastUploadedPdfName = '';
   let lastUploadedDlName = '';
 
@@ -306,6 +405,9 @@
       phonePrefix: document.getElementById('f_phonePrefix').value,
       phoneNumber: document.getElementById('f_phoneNumber').value.trim(),
       apartment: document.getElementById('f_apartment').value,
+      customCity: document.getElementById('f_customCity').value.trim(),
+      customPostalCode: document.getElementById('f_customPostalCode').value.trim(),
+      customStreetAddress: document.getElementById('f_customStreetAddress').value.trim(),
       hireDate: '',
       bankAccount: document.getElementById('f_bankAccount').value.trim(),
       birthDate: document.getElementById('f_birthDate').value,
@@ -319,8 +421,7 @@
       hoodie: document.getElementById('f_hoodie').value,
       pants: document.getElementById('f_pants').value,
       jacket: document.getElementById('f_jacket').value,
-      shoes: document.getElementById('f_shoes').value,
-      notes: document.getElementById('f_notes').value.trim()
+      shoes: document.getElementById('f_shoes').value
     };
 
     if (includeFiles) {
@@ -343,52 +444,70 @@
 
   async function saveForm(autoMode = false, includeFiles = false) {
     if (!sessionToken || formLocked) return;
+    if (!autoMode) showSavingScreen();
 
     try {
       const payload = await buildPayload(includeFiles);
       google.script.run
         .withSuccessHandler(res => {
+          hideSavingScreen();
           if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
           if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
           setStatus('formStatus', autoMode ? t('autosave_ok') : (res.message || t('saved_ok')), 'ok');
           if (!autoMode) showSuccessAndRedirect();
         })
-        .withFailureHandler(err => setStatus('formStatus', t('save_error') + err.message, 'err'))
+        .withFailureHandler(err => {
+          hideSavingScreen();
+          setStatus('formStatus', t('save_error') + err.message, 'err');
+        })
         .saveEmployeeForm(payload);
     } catch (err) {
+      hideSavingScreen();
       setStatus('formStatus', t('prep_error') + err.message, 'err');
     }
   }
 
-  function scheduleAutoSave() {
-    if (!sessionToken || formLocked) return;
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
-  }
-
   document.getElementById('saveFormBtn').onclick = async () => {
     if (!sessionToken) return setStatus('formStatus',t('login_first'),'err');
+    if (!validateEmployeeForm()) {
+      return setStatus('formStatus', t('required_fields'), 'err');
+    }
     await saveForm(false, true);
   };
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');
-  applyI18n();
-  if (!(window.google && google.script && google.script.run)) {
-    setStatus('loginStatus', getLang()==='es'
-      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
-      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+
+  function getOrCreateAdminDeviceId() {
+    const key = 'admin_device_id_v1';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      if (window.crypto && typeof crypto.randomUUID === 'function') {
+        id = crypto.randomUUID();
+      } else {
+        id = `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+      localStorage.setItem(key, id);
+    }
+    return id;
   }
 
-  // Autozapis danych tekstowych/wyborów
-  document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
-    if (el.id === 'f_attachment' || el.id === 'f_drivingLicensePhoto') return;
-    el.addEventListener('input', scheduleAutoSave);
-    el.addEventListener('change', scheduleAutoSave);
-  });
+  const adminLink = document.querySelector('.admin-link');
+  if (adminLink) {
+    adminLink.addEventListener('click', () => {
+      try {
+        const url = new URL(adminLink.href);
+        url.searchParams.set('device', getOrCreateAdminDeviceId());
+        adminLink.href = url.toString();
+      } catch (_) {}
+    });
+  }
 
-  // Autozapis plików od razu po wyborze
-  document.getElementById('f_attachment').addEventListener('change', () => saveForm(true, true));
-  document.getElementById('f_drivingLicensePhoto').addEventListener('change', () => saveForm(true, true));
+  applyI18n();
+  markRequiredFields();
+  setApartmentVisibility();
+  if (!(window.google && google.script && google.script.run)) {
+    setStatus('loginStatus', t('open_in_chrome'), 'err');
+  }
 
 </script>
 </body>
