@@ -151,7 +151,6 @@
       <div><label>Spodnie</label><select id="f_pants"><option>46</option><option>48</option><option>50</option><option>52</option><option>54</option><option>56</option><option>58</option><option>60</option><option>62</option></select></div>
       <div><label>Buty</label><select id="f_shoes"><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option></select></div>
 
-      <div class="full"><label>Notatki</label><textarea id="f_notes"></textarea></div>
       <div class="full"><label>Dołącz skany dokumentów</label><input id="f_attachment" type="file" accept="application/pdf,image/*" required></div>
     </div>
     <div class="row"><button class="btn" id="saveFormBtn" data-i18n="save_form">Zapisz formularz</button></div>
@@ -209,7 +208,7 @@
     'Czy posiadasz prawo jazdy międzynarodowe?':'¿Tienes licencia de conducir internacional?',
     'Data ważności prawa jazdy':'Fecha de vencimiento de la licencia','Zdjęcie prawa jazdy':'Foto de la licencia',
     'Rozmiary ubrań':'Tallas de ropa','Koszulka':'Camiseta','Bluza':'Sudadera','Kurtka':'Chaqueta','Spodnie':'Pantalón',
-    'Buty':'Zapatos','Notatki':'Notas','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)','Dołącz skany dokumentów':'Adjunta escaneos de documentos',
+    'Buty':'Zapatos','Załącznik PDF (opcjonalnie)':'Adjunto PDF (opcional)','Dołącz skany dokumentów':'Adjunta escaneos de documentos',
     'Własne mieszkanie':'Vivienda propia','Miasto':'Ciudad','Kod pocztowy':'Código postal','Ulica i numer domu/mieszkania':'Calle y número de casa/apartamento'
   };
   function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
@@ -356,7 +355,6 @@
     document.getElementById('f_pants').value = employee.pants || '50';
     document.getElementById('f_jacket').value = employee.jacket || 'm';
     document.getElementById('f_shoes').value = employee.shoes || '40';
-    document.getElementById('f_notes').value = employee.notes || '';
     document.getElementById('f_customCity').value = employee.customCity || '';
     document.getElementById('f_customPostalCode').value = employee.customPostalCode || '';
     document.getElementById('f_customStreetAddress').value = employee.customStreetAddress || '';
@@ -423,8 +421,7 @@
       hoodie: document.getElementById('f_hoodie').value,
       pants: document.getElementById('f_pants').value,
       jacket: document.getElementById('f_jacket').value,
-      shoes: document.getElementById('f_shoes').value,
-      notes: document.getElementById('f_notes').value.trim()
+      shoes: document.getElementById('f_shoes').value
     };
 
     if (includeFiles) {
