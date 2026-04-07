@@ -12,7 +12,8 @@ const CFG = {
   ADMIN_PASSWORD: 'admin123', // ZMIEŃ
   SESSION_TTL_SEC: 20 * 60,
   MAX_UPLOAD_PDF_MB: 8,
-  TEST_LOGIN_BYPASS_PESELS: ['99999999999'] // PESEL testowy - brak blokady po zapisie
+  TEST_LOGIN_BYPASS_PESELS: ['99999999999'], // PESEL testowy - brak blokady po zapisie
+  ADMIN_DEVICE_KEY: 'CHANGE_THIS_TO_PRIVATE_DEVICE_KEY' // klucz urządzenia do otwierania panelu admin
 };
 
 const HEADER_SYNONYMS = {
@@ -35,12 +36,18 @@ const HEADER_SYNONYMS = {
 
 function doGet(e) {
   const page = safe_(e && e.parameter && e.parameter.page).toLowerCase();
+  const deviceKey = safe_(e && e.parameter && e.parameter.device);
   const view = page === 'admin' ? 'Admin' : 'Index';
-  const baseUrl = ScriptApp.getService().getUrl();
+
+  if (page === 'admin' && deviceKey !== CFG.ADMIN_DEVICE_KEY) {
+    return HtmlService.createHtmlOutput('<h3>404 - Strona nie istnieje</h3>')
+      .setTitle('404')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+  }
 
   const tpl = HtmlService.createTemplateFromFile(view);
-  tpl.homeUrl = baseUrl;
-  tpl.adminUrl = `${baseUrl}?page=admin`;
+  tpl.homeUrl = ScriptApp.getService().getUrl();
+  tpl.adminUrl = `${tpl.homeUrl}?page=admin&device=${encodeURIComponent(CFG.ADMIN_DEVICE_KEY)}`;
 
   return tpl.evaluate()
     .setTitle(page === 'admin' ? 'Panel administratora' : 'Formulario trabajador')
@@ -318,9 +325,11 @@ function adminSaveCoreLists(adminToken, payload) {
     .map(normalizePesel_)
     .filter(v => /^\d{11}$/.test(v));
 
-  // Listy zakładów i mieszkań działają jako słowniki (nadpisanie aktualnym zbiorem wejściowym)
-  if (plants.length) writeUniqueColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plants);
-  if (apartments.length) writeUniqueColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartments);
+  // Listy zakładów i mieszkań działają jako dopisanie (bez usuwania istniejących wartości)
+  let addedPlants = 0;
+  let addedApartments = 0;
+  if (plants.length) addedPlants = upsertSingleColumnSheet_(getSheet_(CFG.PLANT_LIST_SHEET), 'plant', plants);
+  if (apartments.length) addedApartments = upsertSingleColumnSheet_(getSheet_(CFG.APARTMENT_LIST_SHEET), 'apartment', apartments);
 
   // PESEL dopisywany do wybranego zakładu (wielokrotnego użytku, bez duplikatów pary pesel+plant)
   let savedPesels = 0;
@@ -329,7 +338,7 @@ function adminSaveCoreLists(adminToken, payload) {
     savedPesels = upsertPeselsForPlant_(pesels, selectedPlant);
   }
 
-  return { ok:true, pesels:savedPesels, plants:plants.length, apartments:apartments.length };
+  return { ok:true, pesels:savedPesels, plantsAdded:addedPlants, apartmentsAdded:addedApartments };
 }
 
 function adminRemoveFromLists(adminToken, payload) {
@@ -868,6 +877,36 @@ function parseMultilineList_(txt){
 }
 function writeUniqueColumnSheet_(sheet, headerName, values){
   writeSheetData_(sheet, [headerName], values.map(v => [v]));
+}
+function upsertSingleColumnSheet_(sheet, headerName, values){
+  const vals = sheet.getDataRange().getValues();
+  const h = headerMap_(vals[0] || []);
+  const idx = h[headerName];
+  const existing = new Set();
+  const out = [];
+
+  vals.slice(1).forEach(r => {
+    const v = safe_(idx == null ? '' : r[idx]);
+    if (!v) return;
+    const key = v.toLowerCase();
+    if (existing.has(key)) return;
+    existing.add(key);
+    out.push([v]);
+  });
+
+  let added = 0;
+  values.forEach(v => {
+    const clean = safe_(v);
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (existing.has(key)) return;
+    existing.add(key);
+    out.push([clean]);
+    added++;
+  });
+
+  writeUniqueColumnSheet_(sheet, headerName, out.map(r => r[0]));
+  return added;
 }
 function removeFromSingleColumnSheet_(sheet, headerName, removeSet){
   const vals = sheet.getDataRange().getValues();
