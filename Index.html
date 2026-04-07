@@ -316,7 +316,6 @@
       });
   };
 
-  let autoSaveTimer = null;
   let lastUploadedPdfName = '';
   let lastUploadedDlName = '';
 
@@ -384,12 +383,6 @@
     }
   }
 
-  function scheduleAutoSave() {
-    if (!sessionToken || formLocked) return;
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => saveForm(true, false), 1200);
-  }
-
   document.getElementById('saveFormBtn').onclick = async () => {
     if (!sessionToken) return setStatus('formStatus',t('login_first'),'err');
     if (!validateEmployeeForm()) {
@@ -432,17 +425,6 @@
       ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
       : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
   }
-
-  // Autozapis danych tekstowych/wyborów
-  document.querySelectorAll('#employeeFormWrap input, #employeeFormWrap select, #employeeFormWrap textarea').forEach(el => {
-    if (el.id === 'f_attachment' || el.id === 'f_drivingLicensePhoto') return;
-    el.addEventListener('input', scheduleAutoSave);
-    el.addEventListener('change', scheduleAutoSave);
-  });
-
-  // Autozapis plików od razu po wyborze
-  document.getElementById('f_attachment').addEventListener('change', () => saveForm(true, true));
-  document.getElementById('f_drivingLicensePhoto').addEventListener('change', () => saveForm(true, true));
 
 </script>
 </body>
