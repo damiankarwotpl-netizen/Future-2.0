@@ -161,7 +161,9 @@
       form_sub:'Po zalogowaniu przez PESEL możesz uzupełnić i zapisać dane.', save_form:'Zapisz formularz',
       form_ready:'OK - formularz gotowy do edycji.', login_first:'Najpierw zaloguj się.',
       autosave_ok:'Zapisano.', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
-      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…'
+      ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…',
+      required_fields:'Uzupełnij wszystkie wymagane pola.', file_read_error:'Nie udało się odczytać pliku.',
+      open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.'
     },
     es: {
       emp_title:'Formulario del trabajador', emp_subtitle:'Panel moderno para completar rápidamente los datos del trabajador.',
@@ -170,7 +172,9 @@
       form_sub:'Después de iniciar sesión con PESEL puedes completar y guardar los datos.', save_form:'Guardar formulario',
       form_ready:'OK - formulario listo para editar.', login_first:'Primero inicia sesión.',
       autosave_ok:'Guardado.', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
-      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…'
+      ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…',
+      required_fields:'Completa todos los campos obligatorios.', file_read_error:'No se pudo leer el archivo.',
+      open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.'
     }
   };
   const AUTO_ES = {
@@ -186,6 +190,7 @@
   function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
   function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
   function applyI18n(){
+    document.documentElement.lang = getLang()==='es' ? 'es' : 'pl';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('label, h4.section-title').forEach(el => {
       if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
@@ -199,6 +204,9 @@
       intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
       intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
     }
+    document.querySelectorAll('input[type="date"]').forEach(el => {
+      el.lang = getLang()==='es' ? 'es-ES' : 'pl-PL';
+    });
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
 
@@ -294,7 +302,7 @@
         const out = String(reader.result || '');
         resolve(out.includes(',') ? out.split(',')[1] : out);
       };
-      reader.onerror = () => reject(new Error('Nie udało się odczytać pliku.'));
+      reader.onerror = () => reject(new Error(t('file_read_error')));
       reader.readAsDataURL(file);
     });
   }
@@ -386,7 +394,7 @@
   document.getElementById('saveFormBtn').onclick = async () => {
     if (!sessionToken) return setStatus('formStatus',t('login_first'),'err');
     if (!validateEmployeeForm()) {
-      return setStatus('formStatus', 'Uzupełnij wszystkie wymagane pola.', 'err');
+      return setStatus('formStatus', t('required_fields'), 'err');
     }
     await saveForm(false, true);
   };
@@ -421,9 +429,7 @@
   applyI18n();
   markRequiredFields();
   if (!(window.google && google.script && google.script.run)) {
-    setStatus('loginStatus', getLang()==='es'
-      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
-      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+    setStatus('loginStatus', t('open_in_chrome'), 'err');
   }
 
 </script>
