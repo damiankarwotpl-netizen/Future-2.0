@@ -69,6 +69,8 @@
     .success-card{max-width:620px;width:100%;background:#fff;border:1px solid #c7d2fe;border-radius:22px;padding:30px;text-align:center;box-shadow:0 24px 50px rgba(30,41,90,.2)}
     .success-title{margin:0 0 10px;font-size:1.6rem;color:#1e1b4b}
     .success-sub{margin:0;color:#475569}
+    .progress-wrap{margin-top:14px;height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+    .progress-bar{height:100%;width:0;background:linear-gradient(90deg,#6366f1,#22c55e);transition:width .35s ease}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
     .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
     .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
@@ -143,6 +145,13 @@
     <div id="formStatus" class="status"></div>
   </section>
 </div>
+<section id="savingScreen" class="success-screen hidden">
+  <div class="success-card">
+    <h2 class="success-title" id="savingTitle">Trwa zapisywanie formularza…</h2>
+    <p class="success-sub" id="savingSub">Proszę czekać, nie zamykaj okna.</p>
+    <div class="progress-wrap"><div class="progress-bar" id="savingProgressBar"></div></div>
+  </div>
+</section>
 <section id="successScreen" class="success-screen hidden">
   <div class="success-card">
     <h2 class="success-title" id="successTitle">Dziękujemy, dane zostały zapisane prawidłowo.</h2>
@@ -163,7 +172,8 @@
       autosave_ok:'Zapisano.', saved_ok:'Zapisano.', save_error:'Błąd zapisu: ', prep_error:'Błąd przygotowania danych: ', login_error:'Błąd: '
       ,thanks_saved:'Dziękujemy, dane zostały zapisane prawidłowo.', redirect_in:'Za chwilę nastąpi przekierowanie do Google…',
       required_fields:'Uzupełnij wszystkie wymagane pola.', file_read_error:'Nie udało się odczytać pliku.',
-      open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.'
+      open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.',
+      saving_title:'Trwa zapisywanie formularza…', saving_sub:'Proszę czekać, nie zamykaj okna.'
     },
     es: {
       emp_title:'Formulario del trabajador', emp_subtitle:'Panel moderno para completar rápidamente los datos del trabajador.',
@@ -174,7 +184,8 @@
       autosave_ok:'Guardado.', saved_ok:'Guardado.', save_error:'Error al guardar: ', prep_error:'Error preparando datos: ', login_error:'Error: '
       ,thanks_saved:'Gracias, los datos se guardaron correctamente.', redirect_in:'En un momento serás redirigido a Google…',
       required_fields:'Completa todos los campos obligatorios.', file_read_error:'No se pudo leer el archivo.',
-      open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.'
+      open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.',
+      saving_title:'Guardando formulario…', saving_sub:'Espera por favor, no cierres la ventana.'
     }
   };
   const AUTO_ES = {
@@ -223,6 +234,26 @@
     document.getElementById('successSub').textContent = t('redirect_in');
     document.getElementById('successScreen').classList.remove('hidden');
     setTimeout(() => { window.location.href = 'https://www.google.com'; }, 5000);
+  }
+  let savingAnim = null;
+  function showSavingScreen(){
+    const bar = document.getElementById('savingProgressBar');
+    document.getElementById('savingTitle').textContent = t('saving_title');
+    document.getElementById('savingSub').textContent = t('saving_sub');
+    document.getElementById('savingScreen').classList.remove('hidden');
+    let width = 12;
+    bar.style.width = `${width}%`;
+    if (savingAnim) clearInterval(savingAnim);
+    savingAnim = setInterval(() => {
+      width = Math.min(92, width + Math.random() * 10);
+      bar.style.width = `${width}%`;
+    }, 280);
+  }
+  function hideSavingScreen(){
+    if (savingAnim) clearInterval(savingAnim);
+    savingAnim = null;
+    document.getElementById('savingScreen').classList.add('hidden');
+    document.getElementById('savingProgressBar').style.width = '0%';
   }
 
 
@@ -374,19 +405,25 @@
 
   async function saveForm(autoMode = false, includeFiles = false) {
     if (!sessionToken || formLocked) return;
+    if (!autoMode) showSavingScreen();
 
     try {
       const payload = await buildPayload(includeFiles);
       google.script.run
         .withSuccessHandler(res => {
+          hideSavingScreen();
           if (payload.attachmentName) lastUploadedPdfName = payload.attachmentName;
           if (payload.drivingLicensePhotoName) lastUploadedDlName = payload.drivingLicensePhotoName;
           setStatus('formStatus', autoMode ? t('autosave_ok') : (res.message || t('saved_ok')), 'ok');
           if (!autoMode) showSuccessAndRedirect();
         })
-        .withFailureHandler(err => setStatus('formStatus', t('save_error') + err.message, 'err'))
+        .withFailureHandler(err => {
+          hideSavingScreen();
+          setStatus('formStatus', t('save_error') + err.message, 'err');
+        })
         .saveEmployeeForm(payload);
     } catch (err) {
+      hideSavingScreen();
       setStatus('formStatus', t('prep_error') + err.message, 'err');
     }
   }

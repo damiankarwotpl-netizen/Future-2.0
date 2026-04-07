@@ -166,6 +166,7 @@
     document.documentElement.lang = getLang()==='es' ? 'es' : 'pl';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('label').forEach(el => {
+      if (el.querySelector('input, select, textarea')) return;
       if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
       el.textContent = getLang()==='es' ? (AUTO_ES[el.dataset.plText] || el.dataset.plText) : el.dataset.plText;
     });
@@ -314,17 +315,18 @@
   function refreshOrderCandidates() {
     if (!requireAdmin()) return;
     const plant = document.getElementById('orderPlantSelect').value;
-    const select = document.getElementById('orderPeopleSelect');
-    select.innerHTML = '';
+    const list = document.getElementById('orderPeopleList');
+    list.innerHTML = '';
     if (!plant) return;
 
     google.script.run
       .withSuccessHandler(rows => {
         rows.forEach(r => {
-          const opt = document.createElement('option');
-          opt.value = r.key;
-          opt.textContent = r.label;
-          select.appendChild(opt);
+          const row = document.createElement('label');
+          row.style.display = 'block';
+          row.style.marginBottom = '6px';
+          row.innerHTML = `<input type="checkbox" class="orderPerson" value="${r.key}"> ${r.label}`;
+          list.appendChild(row);
         });
       })
       .withFailureHandler(err => setStatus('orderStatus', 'Błąd listy osób do zamówienia: ' + err.message, 'err'))
@@ -527,13 +529,15 @@
   document.getElementById('orderPlantSelect').addEventListener('change', refreshOrderCandidates);
   document.getElementById('orderMode').addEventListener('change', () => {
     const show = document.getElementById('orderMode').value === 'selected';
-    document.getElementById('orderPeopleSelect').disabled = !show;
+    const list = document.getElementById('orderPeopleList');
+    list.style.opacity = show ? '1' : '.6';
+    list.style.pointerEvents = show ? 'auto' : 'none';
   });
   document.getElementById('generateOrderBtn').onclick = () => {
     if (!requireAdmin()) return;
     const plant = document.getElementById('orderPlantSelect').value;
     const mode = document.getElementById('orderMode').value;
-    const selectedKeys = [...document.getElementById('orderPeopleSelect').selectedOptions].map(o => o.value);
+    const selectedKeys = [...document.querySelectorAll('.orderPerson:checked')].map(el => el.value);
     const parts = [...document.querySelectorAll('.orderPart:checked')].map(el => el.value);
     const quantities = {
       shirt: Number(document.getElementById('qty_shirt').value || 1),
