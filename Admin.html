@@ -62,8 +62,6 @@
     .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
     .plant-link:hover{text-decoration:underline}
     .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
-    #orderPeopleList label{display:flex!important;align-items:center;gap:8px;padding:7px 8px;border-radius:8px}
-    #orderPeopleList label:hover{background:#eef2ff}
     .orderPart{transform:scale(1.15);margin-right:6px}
     #orderLinks .link{display:inline-block;padding:10px 12px;border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
@@ -185,14 +183,22 @@
       border-radius:12px!important;
       background:#f8fbff!important;
     }
-    #orderPeopleList label{
+    #orderPeopleList .order-person-row{
+      display:flex!important;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
       border:1px solid transparent;
       transition:.15s ease;
+      padding:8px 10px;
+      border-radius:10px;
     }
-    #orderPeopleList label:hover{
+    #orderPeopleList .order-person-row:hover{
       border-color:#bfdbfe;
       background:#eaf2ff!important;
     }
+    #orderPeopleList .order-person-label{text-align:right;flex:1;color:#0f172a}
+    #orderPeopleList .orderPerson{margin-left:auto;transform:scale(1.15)}
     #orderLinks .link{
       border-radius:12px;
       border:1px solid #bfdbfe;
@@ -473,9 +479,8 @@
       .withSuccessHandler(rows => {
         rows.forEach(r => {
           const row = document.createElement('label');
-          row.style.display = 'block';
-          row.style.marginBottom = '6px';
-          row.innerHTML = `<input type="checkbox" class="orderPerson" value="${r.key}"> ${r.label}`;
+          row.className = 'order-person-row';
+          row.innerHTML = `<span class="order-person-label">${r.label}</span><input type="checkbox" class="orderPerson" value="${r.key}">`;
           list.appendChild(row);
         });
       })
@@ -605,7 +610,8 @@
     const canvas = document.getElementById('statsChart');
     if (!canvas) return;
     const parentWidth = canvas.parentElement.clientWidth - 20;
-    canvas.width = Math.max(520, parentWidth);
+    const minPerBar = 120;
+    canvas.width = Math.max(560, parentWidth, rows.length * minPerBar);
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
@@ -615,7 +621,7 @@
     if (!rows.length) return;
 
     const chartTop = 24;
-    const chartBottom = h - 54;
+    const chartBottom = h - 92;
     const chartHeight = chartBottom - chartTop;
     const maxTotal = Math.max(...rows.map(r => r.total), 1);
     const barSpace = (w - 40) / rows.length;
@@ -638,8 +644,16 @@
       ctx.fillStyle = '#0f172a';
       ctx.font = '12px Inter, Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(r.plant, x + barW / 2, h - 32);
-      ctx.fillText(`${r.completed}/${r.total}`, x + barW / 2, h - 16);
+      ctx.fillText(`${r.completed}/${r.total}`, x + barW / 2, h - 14);
+
+      const label = (r.plant || '').length > 14 ? `${r.plant.slice(0, 14)}…` : (r.plant || '');
+      ctx.save();
+      ctx.translate(x + barW / 2, h - 38);
+      ctx.rotate(-Math.PI / 5);
+      ctx.fillStyle = '#334155';
+      ctx.textAlign = 'right';
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
     });
   }
 
