@@ -3,51 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <base target="_top">
+  <base target="_self">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Panel administratora</title>
   <script>
-    (function forceChromeOnAndroid(){
-      const ua = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(ua);
-      const isChrome = /Chrome/i.test(ua);
-      const alreadyIntent = location.href.startsWith('intent://');
-      if (isAndroid && !isChrome && !alreadyIntent) {
-        const target = location.href.replace(/^https:\/\//, '');
-        location.replace(`intent://${target}#Intent;scheme=https;package=com.android.chrome;end`);
-      }
-    })();
+    // Globalnie pod telefony: brak automatycznych redirectów i brak przepisywania URL.
+    // Pozwalamy przeglądarce/OS otworzyć dokładnie ten adres, który użytkownik uruchomił.
   </script>
   <style>
     :root{--bg:#eef2ff;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary-2:#3730a3;--border:#dbe4ff;--ok:#047857;--err:#b91c1c;--shadow:0 14px 36px rgba(30,41,90,.12)}
+    html{-webkit-text-size-adjust:100%}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top right,#c7d2fe 0%,transparent 36%),radial-gradient(circle at top left,#e0e7ff 0%,transparent 44%),var(--bg);min-height:100vh}
-    .container{max-width:1140px;margin:30px auto;padding:0 16px 32px;position:relative}
-    .hero{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top right,#c7d2fe 0%,transparent 36%),radial-gradient(circle at top left,#e0e7ff 0%,transparent 44%),linear-gradient(180deg,#eef2ff 0%,#f8fbff 100%);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+    .container{max-width:1240px;margin:24px auto;padding:0 16px 32px;position:relative}
+    .hero{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:rgba(255,255,255,.72);backdrop-filter:blur(8px);border:1px solid #dbeafe;border-radius:18px;padding:12px 14px}
     .hero h1{margin:0 0 6px;font-size:1.65rem}
     .hero p{margin:0;color:var(--muted)}
     .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#3730a3;font-weight:700;font-size:.82rem}
-    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;transition:.2s ease;position:relative;overflow:hidden}
+    .card{background:linear-gradient(180deg,#fff 0%,#fcfdff 100%);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px;transition:.2s ease;position:relative;overflow:hidden}
     .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#6366f1,#4338ca)}
+    .card::after{content:'';position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:radial-gradient(circle,#dbeafe 0%,transparent 70%);pointer-events:none}
     .card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(30,41,90,.14)}
     .section-title{margin:0 0 12px;font-size:1.05rem}
     .section-sub{margin:0 0 14px;color:var(--muted);font-size:.92rem}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .full{grid-column:1/-1}
     label{display:block;font-size:.86rem;color:#334155;margin-bottom:6px;font-weight:600}
-    input,textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease}
+    input,textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;transition:.15s ease;font-size:16px}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
     input:hover,textarea:hover,select:hover{border-color:#94a3b8}
     textarea{min-height:120px}
-    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.24)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+    .btn{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;color:#fff;background:linear-gradient(180deg,var(--primary),var(--primary-2));box-shadow:0 10px 18px rgba(79,70,229,.24);min-height:44px}
     .btn:hover{filter:brightness(1.03)}
-    .btn.secondary{background:#eef2ff;color:#3730a3;box-shadow:none}
-    .status{margin-top:10px;font-weight:700;padding:8px 10px;border-radius:9px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
+    .btn.secondary{background:#eef2ff;color:#3730a3;box-shadow:none;border:1px solid #c7d2fe}
+    .status{margin-top:10px;font-weight:700;padding:10px 12px;border-radius:12px;display:inline-block;min-height:36px;background:#f8fafc;border:1px solid #e2e8f0}
     .ok{color:var(--ok);background:#ecfdf5;border-color:#a7f3d0}.err{color:var(--err);background:#fef2f2;border-color:#fecaca}
     .hidden{display:none}
-    table{width:100%;border-collapse:collapse}
+    table{width:100%;border-collapse:collapse;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
     th,td{border:1px solid #e2e8f0;padding:8px;text-align:left}
     tbody tr:nth-child(even){background:#fafbff}
     tbody tr:hover{background:#eef2ff}
@@ -61,17 +56,158 @@
     .kpi .value{font-size:1.3rem;font-weight:800;color:#1e1b4b}
     .stats-layout{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
     .stats-chart-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px}
-    .card-soft{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+    .card-soft{background:linear-gradient(180deg,#f8fafc,#f1f5f9);border:1px solid #dbeafe;border-radius:16px;padding:14px}
     #missingPeselList{margin:8px 0 0;padding-left:18px;max-height:280px;overflow:auto}
     .stats-table{margin-top:10px}
     .plant-link{background:none;border:none;color:#4338ca;font-weight:700;cursor:pointer;padding:0}
     .plant-link:hover{text-decoration:underline}
     .progress-pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;font-weight:700}
+    #orderPeopleList label{display:flex!important;align-items:center;gap:8px;padding:7px 8px;border-radius:8px}
+    #orderPeopleList label:hover{background:#eef2ff}
+    .orderPart{transform:scale(1.15);margin-right:6px}
+    #orderLinks .link{display:inline-block;padding:10px 12px;border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff}
     .lang-switch{position:fixed;top:10px;right:12px;display:flex;gap:6px;z-index:999;background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid #cbd5e1;padding:4px;border-radius:999px}
     .flag-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 7px;font-size:14px;cursor:pointer;line-height:1}
     .flag-btn.active{box-shadow:0 0 0 2px #c7d2fe}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.row .btn{width:100%}}
     @media(max-width:900px){.stats-layout{grid-template-columns:1fr}}
+    @media(max-width:640px){
+      .container{margin:12px auto;padding:0 10px 18px}
+      .hero h1{font-size:1.28rem}
+      .hero p{font-size:.92rem}
+      .card{padding:14px;border-radius:16px}
+      .status{width:100%;display:block}
+      .row{gap:10px}
+    }
+
+    /* ===== Admin UI 2.0 (override theme) ===== */
+    :root{
+      --ui-bg-1:#0b1020;
+      --ui-bg-2:#111a35;
+      --ui-card:#ffffff;
+      --ui-text:#0f172a;
+      --ui-muted:#475569;
+      --ui-primary:#2563eb;
+      --ui-primary-2:#1d4ed8;
+      --ui-ring:rgba(37,99,235,.22);
+      --ui-ok:#16a34a;
+      --ui-err:#dc2626;
+    }
+    body{
+      background:
+        radial-gradient(1200px 420px at 10% -15%, rgba(59,130,246,.25), transparent 65%),
+        radial-gradient(900px 420px at 100% -20%, rgba(99,102,241,.24), transparent 65%),
+        linear-gradient(160deg,var(--ui-bg-1) 0%, var(--ui-bg-2) 100%) !important;
+      color:#e2e8f0;
+    }
+    .container{max-width:1320px;margin:18px auto;padding:0 14px 26px}
+    .hero{
+      background:rgba(15,23,42,.52);
+      border:1px solid rgba(148,163,184,.26);
+      box-shadow:0 18px 45px rgba(2,6,23,.35);
+      backdrop-filter:blur(12px);
+    }
+    .hero h1,.hero p,.hero-badge{color:#e2e8f0}
+    .hero-badge{
+      background:rgba(37,99,235,.2);
+      border-color:rgba(96,165,250,.35);
+      color:#bfdbfe;
+    }
+    .card{
+      background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%);
+      border:1px solid #dbeafe;
+      border-radius:20px;
+      box-shadow:0 18px 42px rgba(15,23,42,.18);
+      color:var(--ui-text);
+    }
+    .card::before{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
+    .section-sub{color:var(--ui-muted)}
+    input,textarea,select{
+      border:1px solid #cbd5e1;
+      border-radius:12px;
+      background:#fff;
+      color:#0f172a;
+    }
+    input:focus,textarea:focus,select:focus{
+      border-color:var(--ui-primary);
+      box-shadow:0 0 0 4px var(--ui-ring);
+    }
+    .btn{
+      background:linear-gradient(180deg,var(--ui-primary),var(--ui-primary-2));
+      box-shadow:0 12px 24px rgba(37,99,235,.28);
+    }
+    .btn.secondary{
+      background:#eef4ff;
+      color:#1e3a8a;
+      border:1px solid #bfdbfe;
+    }
+    .status{
+      border-radius:12px;
+      background:#f8fafc;
+      border-color:#e2e8f0;
+      color:#0f172a;
+    }
+    .ok{color:var(--ui-ok)!important;background:#f0fdf4!important;border-color:#bbf7d0!important}
+    .err{color:var(--ui-err)!important;background:#fef2f2!important;border-color:#fecaca!important}
+    .card-soft{
+      background:linear-gradient(180deg,#eff6ff,#f8fbff);
+      border:1px solid #c7dcff;
+      border-radius:14px;
+    }
+    table{
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      border:1px solid #dbeafe;
+    }
+    th{
+      background:#eff6ff;
+      color:#1e3a8a;
+      font-weight:800;
+    }
+    td{color:#0f172a}
+    tbody tr:nth-child(even){background:#f8fbff}
+    tbody tr:hover{background:#eaf2ff}
+    .kpi{
+      background:linear-gradient(180deg,#fff,#f8fbff);
+      border:1px solid #dbeafe;
+      box-shadow:0 8px 18px rgba(30,64,175,.08);
+    }
+    .kpi .label{color:#334155}
+    .kpi .value{color:#1e3a8a}
+    .progress-pill{
+      background:#dbeafe;
+      color:#1e3a8a;
+      font-weight:800;
+    }
+    #orderPeopleList{
+      border:1px solid #bfdbfe!important;
+      border-radius:12px!important;
+      background:#f8fbff!important;
+    }
+    #orderPeopleList label{
+      border:1px solid transparent;
+      transition:.15s ease;
+    }
+    #orderPeopleList label:hover{
+      border-color:#bfdbfe;
+      background:#eaf2ff!important;
+    }
+    #orderLinks .link{
+      border-radius:12px;
+      border:1px solid #bfdbfe;
+      background:#eff6ff;
+      color:#1e40af;
+      font-weight:700;
+      text-decoration:none;
+    }
+    #orderLinks .link:hover{background:#dbeafe}
+    .lang-switch{
+      background:rgba(15,23,42,.62);
+      border-color:rgba(148,163,184,.35);
+    }
+    .flag-btn{background:#0f172a;color:#fff;border-color:#334155}
+    .flag-btn.active{box-shadow:0 0 0 2px #60a5fa}
   </style>
 </head>
 <body>
@@ -96,7 +232,7 @@
     </div>
     <div class="row"><button class="btn" id="adminAuthBtn" data-i18n="admin_login_btn">Zaloguj do panelu admin</button></div>
     <div id="adminAuthStatus" class="status"></div>
-    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_top" rel="noopener" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
+    <div style="margin-top:10px"><a class="link" href="<?= homeUrl ?>" target="_blank" rel="noopener noreferrer" data-i18n="back_emp">← Wróć do panelu pracownika</a></div>
   </section>
 
   <div id="adminApp" class="hidden">
@@ -123,7 +259,17 @@
       edit_emp_title:'Edytuj pracownika (wypełnił formularz)', refresh_emp:'Odśwież listę pracowników', load_edit:'Wczytaj do edycji',
       save_emp_changes:'Zapisz zmiany pracownika', stats_title:'Statystyki wypełnienia formularza', refresh_stats:'Odśwież statystyki',
       gen_test_db:'Generuj bazę testową', click_plant_missing:'Kliknij zakład, aby zobaczyć brakujące PESEL'
-      ,live_wait:'LIVE: oczekiwanie na dane…', live_updated:'LIVE: ostatnia aktualizacja ', missing_for:'Brakujące PESEL dla zakładu: ', all_done:'Wszyscy mają już wypełniony formularz.'
+      ,live_wait:'LIVE: oczekiwanie na dane…', live_updated:'LIVE: ostatnia aktualizacja ', missing_for:'Brakujące PESEL dla zakładu: ', all_done:'Wszyscy mają już wypełniony formularz.',
+      choose:'-- wybierz --', list_added_prefix:'Dodano: PESEL ', plants_word:', Zakład ', apartments_word:', Mieszkanie ', list_save_err:'Błąd zapisu list: ',
+      remove_ok:'Usunięto wskazane wartości z list.', remove_err:'Błąd usuwania z list: ', fetch_emp_err:'Błąd pobierania pracowników: ',
+      load_emp_err:'Błąd wczytywania pracownika: ', generated_test_db:'Wygenerowano bazę testową: ', generated_workers:' pracowników.',
+      gen_test_db_err:'Błąd generowania bazy testowej: ', current_plants:'Aktualna lista zakładów', current_apartments:'Aktualna lista mieszkań',
+      kpi_done:'Wypełnione', kpi_missing:'Brakuje', kpi_all:'Wszystkie osoby', kpi_progress:'Łączny postęp', open_in_chrome:'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.',
+      order_title:'Generuj zamówienie ubrań', order_plant:'Zakład', order_for:'Dla kogo', order_all:'Wszyscy', order_selected:'Wybrane osoby',
+      order_people:'Wybrane osoby', order_generate:'Generuj zamówienie', order_people_err:'Błąd listy osób do zamówienia: ',
+      order_done_prefix:'Wygenerowano zamówienie (', order_done_suffix:' osób).', order_gen_err:'Błąd generowania zamówienia: ',
+      part_shirt:'Koszulka', part_hoodie:'Bluza', part_jacket:'Kurtka', part_pants:'Spodnie', part_shoes:'Buty',
+      th_plant:'Zakład', th_done:'Wypełnione', th_missing:'Brakuje', th_all:'Wszystkie', th_progress:'Postęp'
     },
     es: {
       admin_title:'Panel de administrador', admin_sub:'Gestiona listas, trabajadores y estadísticas en un solo lugar.', admin_mode:'Modo administrador • LIVE',
@@ -139,7 +285,17 @@
       edit_emp_title:'Editar trabajador (formulario completado)', refresh_emp:'Actualizar lista de trabajadores', load_edit:'Cargar para editar',
       save_emp_changes:'Guardar cambios del trabajador', stats_title:'Estadísticas de formularios completados', refresh_stats:'Actualizar estadísticas',
       gen_test_db:'Generar base de prueba', click_plant_missing:'Haz clic en una planta para ver PESEL faltantes'
-      ,live_wait:'LIVE: esperando datos…', live_updated:'LIVE: última actualización ', missing_for:'PESEL faltantes para la planta: ', all_done:'Todos ya completaron el formulario.'
+      ,live_wait:'LIVE: esperando datos…', live_updated:'LIVE: última actualización ', missing_for:'PESEL faltantes para la planta: ', all_done:'Todos ya completaron el formulario.',
+      choose:'-- seleccionar --', list_added_prefix:'Añadidos: PESEL ', plants_word:', Planta ', apartments_word:', Vivienda ', list_save_err:'Error al guardar listas: ',
+      remove_ok:'Se eliminaron los valores seleccionados de las listas.', remove_err:'Error al eliminar de las listas: ', fetch_emp_err:'Error al cargar trabajadores: ',
+      load_emp_err:'Error al cargar trabajador: ', generated_test_db:'Base de prueba generada: ', generated_workers:' trabajadores.',
+      gen_test_db_err:'Error al generar base de prueba: ', current_plants:'Lista actual de plantas', current_apartments:'Lista actual de viviendas',
+      kpi_done:'Completados', kpi_missing:'Faltan', kpi_all:'Total de personas', kpi_progress:'Progreso total', open_in_chrome:'No se pudo abrir correctamente. Abre el enlace en Chrome.',
+      order_title:'Generar pedido de ropa', order_plant:'Planta', order_for:'Para quién', order_all:'Todos', order_selected:'Personas seleccionadas',
+      order_people:'Personas seleccionadas', order_generate:'Generar pedido', order_people_err:'Error al cargar personas para el pedido: ',
+      order_done_prefix:'Pedido generado (', order_done_suffix:' personas).', order_gen_err:'Error al generar pedido: ',
+      part_shirt:'Camiseta', part_hoodie:'Sudadera', part_jacket:'Chaqueta', part_pants:'Pantalón', part_shoes:'Zapatos',
+      th_plant:'Planta', th_done:'Completados', th_missing:'Faltan', th_all:'Todos', th_progress:'Progreso'
     }
   };
   const AUTO_ES = {
@@ -152,8 +308,10 @@
   function getLang(){ return localStorage.getItem('app_lang') || 'pl'; }
   function t(key){ const lang=getLang(); return (I18N[lang] && I18N[lang][key]) || I18N.pl[key] || key; }
   function applyI18n(){
+    document.documentElement.lang = getLang()==='es' ? 'es' : 'pl';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('label').forEach(el => {
+      if (el.querySelector('input, select, textarea')) return;
       if (!el.dataset.plText) el.dataset.plText = el.textContent.trim();
       el.textContent = getLang()==='es' ? (AUTO_ES[el.dataset.plText] || el.dataset.plText) : el.dataset.plText;
     });
@@ -169,6 +327,14 @@
     if (intl) {
       intl.options[0].textContent = getLang()==='es' ? 'no' : 'nie';
       intl.options[1].textContent = getLang()==='es' ? 'sí' : 'tak';
+    }
+    document.querySelectorAll('input[type="date"]').forEach(el => {
+      el.lang = getLang()==='es' ? 'es-ES' : 'pl-PL';
+    });
+    const orderMode = document.getElementById('orderMode');
+    if (orderMode && orderMode.options.length >= 2) {
+      orderMode.options[0].textContent = t('order_all');
+      orderMode.options[1].textContent = t('order_selected');
     }
   }
   function setLang(lang){ localStorage.setItem('app_lang', lang); applyI18n(); }
@@ -203,7 +369,7 @@
       .withSuccessHandler(res => {
         const plantSelects = [document.getElementById('peselAssignPlant'), document.getElementById('plantRemoveSelect')];
         plantSelects.forEach(sel => {
-          sel.innerHTML = '<option value=>-- wybierz --</option>';
+          sel.innerHTML = `<option value=>${t('choose')}</option>`;
           res.plants.forEach(p => {
             const o = document.createElement('option');
             o.value = p;
@@ -213,7 +379,7 @@
         });
 
         const aptSel = document.getElementById('apartmentRemoveSelect');
-        aptSel.innerHTML = '<option value=>-- wybierz --</option>';
+        aptSel.innerHTML = `<option value=>${t('choose')}</option>`;
         res.apartments.forEach(a => {
           const o = document.createElement('option');
           o.value = a;
@@ -221,8 +387,28 @@
           aptSel.appendChild(o);
         });
 
+        const plantList = document.getElementById('plantCurrentList');
+        if (plantList) {
+          plantList.innerHTML = '';
+          res.plants.forEach(p => {
+            const li = document.createElement('li');
+            li.textContent = p;
+            plantList.appendChild(li);
+          });
+        }
+
+        const apartmentList = document.getElementById('apartmentCurrentList');
+        if (apartmentList) {
+          apartmentList.innerHTML = '';
+          res.apartments.forEach(a => {
+            const li = document.createElement('li');
+            li.textContent = a;
+            apartmentList.appendChild(li);
+          });
+        }
+
         const peselSel = document.getElementById('peselRemoveSelect');
-        peselSel.innerHTML = '<option value=>-- wybierz --</option>';
+        peselSel.innerHTML = `<option value=>${t('choose')}</option>`;
         res.peselOptions.forEach(item => {
           const o = document.createElement('option');
           o.value = item.value;
@@ -232,6 +418,8 @@
 
         setSelectOptions('edit_plant', res.plants);
         setSelectOptions('edit_apartment', res.apartments);
+        setSelectOptions('orderPlantSelect', res.plants);
+        refreshOrderCandidates();
       })
       .withFailureHandler(err=>setStatus('importStatus',t('list_refresh_err')+err.message,'err'))
       .adminGetCoreLists(adminToken);
@@ -256,10 +444,11 @@
 
     google.script.run
       .withSuccessHandler(res => {
-        setStatus('importStatus', `Zapisano: PESEL ${res.pesels}, Zakład ${res.plants}, Mieszkanie ${res.apartments}.`, 'ok');
+        setStatus('importStatus', `${t('list_added_prefix')}${res.pesels}${t('plants_word')}${res.plantsAdded}${t('apartments_word')}${res.apartmentsAdded}.`, 'ok');
+        refreshCoreLists();
         loadStats(true);
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd zapisu list: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('list_save_err')+err.message,'err'))
       .adminSaveCoreLists(adminToken, {
         pesels: document.getElementById('peselBulk').value,
         plants: document.getElementById('plantBulk').value,
@@ -273,15 +462,36 @@
     refreshCoreLists();
   };
 
+  function refreshOrderCandidates() {
+    if (!requireAdmin()) return;
+    const plant = document.getElementById('orderPlantSelect').value;
+    const list = document.getElementById('orderPeopleList');
+    list.innerHTML = '';
+    if (!plant) return;
+
+    google.script.run
+      .withSuccessHandler(rows => {
+        rows.forEach(r => {
+          const row = document.createElement('label');
+          row.style.display = 'block';
+          row.style.marginBottom = '6px';
+          row.innerHTML = `<input type="checkbox" class="orderPerson" value="${r.key}"> ${r.label}`;
+          list.appendChild(row);
+        });
+      })
+      .withFailureHandler(err => setStatus('orderStatus', t('order_people_err') + err.message, 'err'))
+      .adminGetOrderCandidates(adminToken, plant);
+  }
+
   document.getElementById('removeListsBtn').onclick = () => {
     if (!requireAdmin()) return;
 
     google.script.run
       .withSuccessHandler(() => {
-        setStatus('importStatus', 'Usunięto wskazane wartości z list.', 'ok');
+        setStatus('importStatus', t('remove_ok'), 'ok');
         loadStats(true);
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd usuwania z list: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('remove_err')+err.message,'err'))
       .adminRemoveFromLists(adminToken, {
         peselKey: document.getElementById('peselRemoveSelect').value,
         plant: document.getElementById('plantRemoveSelect').value,
@@ -303,7 +513,7 @@
           sel.appendChild(o);
         });
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd pobierania pracowników: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('fetch_emp_err')+err.message,'err'))
       .adminListCompletedEmployees(adminToken);
   };
 
@@ -336,7 +546,7 @@
         document.getElementById('edit_phoneNumber').defaultValue = phone.number;
         setEditIntlDrivingVisibility();
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd wczytywania pracownika: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('load_emp_err')+err.message,'err'))
       .adminGetEmployeeForEdit(adminToken, key.pesel, key.plant);
   };
 
@@ -383,10 +593,10 @@
     const remaining = rows.reduce((a, r) => a + r.remaining, 0);
     const percent = total ? Math.round((completed / total) * 100) : 0;
     document.getElementById('statsSummary').innerHTML = `
-      <div class="kpi"><div class="label">Wypełnione</div><div class="value">${completed}</div></div>
-      <div class="kpi"><div class="label">Brakuje</div><div class="value">${remaining}</div></div>
-      <div class="kpi"><div class="label">Wszystkie osoby</div><div class="value">${total}</div></div>
-      <div class="kpi"><div class="label">Łączny postęp</div><div class="value">${percent}%</div></div>
+      <div class="kpi"><div class="label">${t('kpi_done')}</div><div class="value">${completed}</div></div>
+      <div class="kpi"><div class="label">${t('kpi_missing')}</div><div class="value">${remaining}</div></div>
+      <div class="kpi"><div class="label">${t('kpi_all')}</div><div class="value">${total}</div></div>
+      <div class="kpi"><div class="label">${t('kpi_progress')}</div><div class="value">${percent}%</div></div>
     `;
     drawStatsChart(rows);
   }
@@ -466,14 +676,45 @@
   }
 
   document.getElementById('refreshStatsBtn').onclick = () => loadStats(false);
+  document.getElementById('orderPlantSelect').addEventListener('change', refreshOrderCandidates);
+  document.getElementById('orderMode').addEventListener('change', () => {
+    const show = document.getElementById('orderMode').value === 'selected';
+    const list = document.getElementById('orderPeopleList');
+    list.style.opacity = show ? '1' : '.6';
+    list.style.pointerEvents = show ? 'auto' : 'none';
+  });
+  document.getElementById('generateOrderBtn').onclick = () => {
+    if (!requireAdmin()) return;
+    const plant = document.getElementById('orderPlantSelect').value;
+    const mode = document.getElementById('orderMode').value;
+    const selectedKeys = [...document.querySelectorAll('.orderPerson:checked')].map(el => el.value);
+    const parts = [...document.querySelectorAll('.orderPart:checked')].map(el => el.value);
+    const quantities = {
+      shirt: Number(document.getElementById('qty_shirt').value || 1),
+      hoodie: Number(document.getElementById('qty_hoodie').value || 1),
+      jacket: Number(document.getElementById('qty_jacket').value || 1),
+      pants: Number(document.getElementById('qty_pants').value || 1),
+      shoes: Number(document.getElementById('qty_shoes').value || 1)
+    };
+
+    google.script.run
+      .withSuccessHandler(res => {
+        setStatus('orderStatus', `${t('order_done_prefix')}${res.employees}${t('order_done_suffix')}`, 'ok');
+        const wrap = document.getElementById('orderLinks');
+        wrap.innerHTML = `
+          <a class="link" href="${res.summaryUrl}" target="_blank" rel="noopener">📄 ${res.summaryName}</a>
+          <a class="link" href="${res.issueUrl}" target="_blank" rel="noopener">📄 ${res.issueName}</a>
+        `;
+      })
+      .withFailureHandler(err => setStatus('orderStatus', t('order_gen_err') + err.message, 'err'))
+      .adminGenerateOrder(adminToken, { plant, mode, selectedKeys, parts, quantities });
+  };
   document.getElementById('edit_intlDrivingLicense').addEventListener('change', setEditIntlDrivingVisibility);
   document.getElementById('langPL').onclick = () => setLang('pl');
   document.getElementById('langES').onclick = () => setLang('es');
   applyI18n();
   if (!(window.google && google.script && google.script.run)) {
-    setStatus('adminAuthStatus', getLang()==='es'
-      ? 'No se pudo abrir correctamente. Abre el enlace en Chrome.'
-      : 'Nie udało się poprawnie otworzyć strony. Otwórz link w Chrome.', 'err');
+    setStatus('adminAuthStatus', t('open_in_chrome'), 'err');
   }
   setEditIntlDrivingVisibility();
   document.getElementById('statsBody').addEventListener('click', e => {
@@ -487,10 +728,10 @@
 
     google.script.run
       .withSuccessHandler(res=>{
-        setStatus('importStatus', `Wygenerowano bazę testową: ${res.generated} pracowników.`, 'ok');
+        setStatus('importStatus', `${t('generated_test_db')}${res.generated}${t('generated_workers')}`, 'ok');
         loadStats(true);
       })
-      .withFailureHandler(err=>setStatus('importStatus','Błąd generowania bazy testowej: '+err.message,'err'))
+      .withFailureHandler(err=>setStatus('importStatus',t('gen_test_db_err')+err.message,'err'))
       .adminGenerateTestDatabase(adminToken);
   };
 </script>
